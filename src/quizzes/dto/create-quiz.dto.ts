@@ -31,6 +31,10 @@ export class CreateQuestionDto {
   @IsString()
   correctAnswer?: string;
 
+  @IsOptional()
+  @IsString()
+  correctAnswerExplanation?: string;
+
   @IsNumber()
   @IsPositive()
   marks: number;

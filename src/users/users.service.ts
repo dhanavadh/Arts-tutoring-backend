@@ -14,7 +14,24 @@ export class UsersService {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const user = this.userRepository.create(createUserDto);
+    const userData = { ...createUserDto };
+    
+    // Set default profile image based on role if not provided
+    if (!userData.profileImage) {
+      switch (userData.role) {
+        case UserRole.STUDENT:
+          userData.profileImage = 'https://artstutoring01.iconroof.co.th/student.png';
+          break;
+        case UserRole.TEACHER:
+          userData.profileImage = 'https://artstutoring01.iconroof.co.th/teacher.png';
+          break;
+        case UserRole.ADMIN:
+          userData.profileImage = 'https://artstutoring01.iconroof.co.th/admin.png';
+          break;
+      }
+    }
+    
+    const user = this.userRepository.create(userData);
     return this.userRepository.save(user);
   }
 

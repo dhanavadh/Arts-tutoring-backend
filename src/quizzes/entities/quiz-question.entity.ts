@@ -37,6 +37,9 @@ export class QuizQuestion {
   @Column({ name: 'correct_answer' })
   correctAnswer: string;
 
+  @Column({ name: 'correct_answer_explanation', nullable: true })
+  correctAnswerExplanation: string;
+
   @Column({ default: 1 })
   marks: number;
 
