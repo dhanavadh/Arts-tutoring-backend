@@ -29,7 +29,10 @@ export class ArticlesController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.TEACHER)
-  create(@Body() createArticleDto: CreateArticleDto, @CurrentUser() user: User) {
+  create(
+    @Body() createArticleDto: CreateArticleDto,
+    @CurrentUser() user: User,
+  ) {
     return this.articlesService.create(createArticleDto, user);
   }
 

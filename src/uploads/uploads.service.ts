@@ -63,7 +63,11 @@ export class UploadsService {
       case UploadType.ARTICLE_IMAGE:
         return ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
       case UploadType.DOCUMENT:
-        return ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        return [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ];
       default:
         return [];
     }
@@ -81,5 +85,47 @@ export class UploadsService {
       default:
         return baseUploadPath;
     }
+  }
+
+  async create(createUploadDto: any): Promise<any> {
+    // This method would be called from controller
+    throw new BadRequestException('Use uploadFile method instead');
+  }
+
+  async findAll(): Promise<FileUpload[]> {
+    return this.fileUploadRepository.find({
+      relations: ['uploadedBy'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findOne(id: number): Promise<FileUpload> {
+    const file = await this.fileUploadRepository.findOne({
+      where: { id },
+      relations: ['uploadedBy'],
+    });
+
+    if (!file) {
+      throw new BadRequestException('File not found');
+    }
+
+    return file;
+  }
+
+  async update(id: number, updateUploadDto: any): Promise<FileUpload> {
+    const file = await this.findOne(id);
+    Object.assign(file, updateUploadDto);
+    return this.fileUploadRepository.save(file);
+  }
+
+  async remove(id: number): Promise<void> {
+    const file = await this.findOne(id);
+    
+    // Delete physical file
+    if (fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
+
+    await this.fileUploadRepository.remove(file);
   }
 }

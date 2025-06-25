@@ -1,4 +1,10 @@
-import { IsString, IsNumber, IsEnum, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsEnum,
+  IsOptional,
+  IsBoolean,
+} from 'class-validator';
 import { UploadType } from '../entities/file-upload.entity';
 import { PartialType } from '@nestjs/mapped-types';
 

@@ -46,10 +46,10 @@ export class User {
   @Column({ name: 'profile_image', nullable: true })
   profileImage: string;
 
-  @OneToOne(() => Teacher, teacher => teacher.user)
+  @OneToOne(() => Teacher, (teacher) => teacher.user)
   teacher: Teacher;
 
-  @OneToOne(() => Student, student => student.user)
+  @OneToOne(() => Student, (student) => student.user)
   student: Student;
 
   @CreateDateColumn({ name: 'created_at' })

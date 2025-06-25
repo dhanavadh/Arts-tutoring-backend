@@ -1,22 +1,14 @@
-import { IsNumber, IsEnum, IsString, IsOptional, IsDateString } from 'class-validator';
-import { BookingStatus } from '../entities/booking.entity';
+import { IsNumber, IsDateString, IsOptional, IsString } from 'class-validator';
 
 export class CreateBookingDto {
-  @IsNumber()
-  studentId: number;
-
   @IsNumber()
   teacherId: number;
 
   @IsDateString()
-  startTime: Date;
+  startTime: string;
 
   @IsDateString()
-  endTime: Date;
-
-  @IsOptional()
-  @IsEnum(BookingStatus)
-  status?: BookingStatus;
+  endTime: string;
 
   @IsOptional()
   @IsString()
@@ -25,8 +17,4 @@ export class CreateBookingDto {
   @IsOptional()
   @IsString()
   notes?: string;
-
-  @IsOptional()
-  @IsString()
-  meetingLink?: string;
 }
