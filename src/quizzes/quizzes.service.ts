@@ -71,7 +71,6 @@ export class QuizzesService {
 
   async findAll(page: number = 1, limit: number = 10) {
     const [quizzes, total] = await this.quizRepository.findAndCount({
-      relations: ['teacher', 'teacher.user'],
       where: { isActive: true },
       skip: (page - 1) * limit,
       take: limit,
