@@ -21,8 +21,10 @@ export class StudentsController {
   }
 
   @Get()
-  findAll() {
-    return this.studentsService.findAll();
+  async findAll() {
+    const result = await this.studentsService.findAll();
+    // Return just the students array for frontend compatibility
+    return result.students;
   }
 
   @Get(':id')

@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Put,
   UseGuards,
   Query,
   ParseIntPipe,
@@ -29,7 +30,7 @@ export class QuizzesController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles(UserRole.TEACHER)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
   create(@Body() createQuizDto: CreateQuizDto, @CurrentUser() user: User) {
     return this.quizzesService.create(createQuizDto, user);
   }
@@ -60,9 +61,20 @@ export class QuizzesController {
     return this.quizzesService.findOne(id);
   }
 
+  @Put(':id')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateQuizDto: CreateQuizDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.quizzesService.update(id, updateQuizDto, user);
+  }
+
   @Post(':id/assign')
   @UseGuards(RolesGuard)
-  @Roles(UserRole.TEACHER)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
   assignQuiz(
     @Param('id', ParseIntPipe) id: number,
     @Body() assignQuizDto: AssignQuizDto,
@@ -95,7 +107,7 @@ export class QuizzesController {
 
   @Patch('attempts/:attemptId/grade')
   @UseGuards(RolesGuard)
-  @Roles(UserRole.TEACHER)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
   gradeManualQuestions(
     @Param('attemptId', ParseIntPipe) attemptId: number,
     @Body('grades') grades: Record<number, number>,
@@ -106,7 +118,7 @@ export class QuizzesController {
 
   @Get(':id/results')
   @UseGuards(RolesGuard)
-  @Roles(UserRole.TEACHER)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
   getQuizResults(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: User,
@@ -116,7 +128,7 @@ export class QuizzesController {
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles(UserRole.TEACHER)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
   remove(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: User) {
     return this.quizzesService.delete(id, user);
   }

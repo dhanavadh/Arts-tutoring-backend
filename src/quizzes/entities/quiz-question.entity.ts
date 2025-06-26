@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -12,6 +13,7 @@ export enum QuestionType {
   MULTIPLE_CHOICE = 'multiple_choice',
   TRUE_FALSE = 'true_false',
   SHORT_ANSWER = 'short_answer',
+  ESSAY = 'essay',
 }
 
 @Entity('quiz_questions')
@@ -20,6 +22,7 @@ export class QuizQuestion {
   id: number;
 
   @ManyToOne(() => Quiz, (quiz) => quiz.questions)
+  @JoinColumn({ name: 'quiz_id' })
   quiz: Quiz;
 
   @Column({ name: 'quiz_id' })
@@ -34,7 +37,7 @@ export class QuizQuestion {
   @Column({ type: 'json', nullable: true })
   options: string[];
 
-  @Column({ name: 'correct_answer' })
+  @Column({ name: 'correct_answer', nullable: true })
   correctAnswer: string;
 
   @Column({ name: 'correct_answer_explanation', nullable: true })

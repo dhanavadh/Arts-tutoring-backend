@@ -34,11 +34,21 @@ export class QuizzesService {
   ) {}
 
   async create(createQuizDto: CreateQuizDto, user: User): Promise<Quiz> {
-    if (user.role !== UserRole.TEACHER) {
-      throw new ForbiddenException('Only teachers can create quizzes');
+    if (user.role !== UserRole.TEACHER && user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only teachers and admins can create quizzes');
     }
 
-    const teacher = await this.teachersService.findByUserId(user.id);
+    let teacherId: number | null;
+    
+    if (user.role === UserRole.TEACHER) {
+      const teacher = await this.teachersService.findByUserId(user.id);
+      teacherId = teacher.id;
+    } else {
+      // For admin users, set teacherId to null or create a default teacher entry
+      // For simplicity, we'll set it to null and handle it in the entity
+      teacherId = null;
+    }
+
     const { questions, ...quizData } = createQuizDto;
 
     // Calculate total marks
@@ -49,22 +59,74 @@ export class QuizzesService {
 
     const quiz = this.quizRepository.create({
       ...quizData,
-      teacherId: teacher.id,
+      teacherId,
       totalMarks,
     });
 
-    const savedQuiz = await this.quizRepository.save(quiz) as Quiz;
+    let savedQuiz;
+    try {
+      savedQuiz = await this.quizRepository.save(quiz) as Quiz;
+      console.log('Quiz saved successfully with ID:', savedQuiz.id);
+    } catch (error) {
+      console.error('Error saving quiz:', error);
+      throw new BadRequestException(`Failed to save quiz: ${error.message}`);
+    }
 
     // Create questions
-    const quizQuestions = questions.map((question, index) =>
-      this.quizQuestionRepository.create({
-        ...question,
+    console.log('Creating questions for quiz:', savedQuiz.id);
+    console.log('Questions to create:', JSON.stringify(questions, null, 2));
+    
+    if (!questions || questions.length === 0) {
+      console.log('No questions provided, returning quiz without questions');
+      return this.findOne(savedQuiz.id);
+    }
+
+    const quizQuestions = questions.map((question, index) => {
+      // Validate required fields
+      if (!question.question || !question.question.trim()) {
+        throw new BadRequestException(`Question ${index + 1} is missing question text`);
+      }
+      if (!question.questionType) {
+        throw new BadRequestException(`Question ${index + 1} is missing question type`);
+      }
+      // Only require correct answer for multiple choice and true/false questions
+      if ((question.questionType === 'multiple_choice' || question.questionType === 'true_false') && 
+          (!question.correctAnswer || !question.correctAnswer.trim())) {
+        throw new BadRequestException(`Question ${index + 1} must have a correct answer for ${question.questionType} questions`);
+      }
+      if (!question.marks || question.marks <= 0) {
+        throw new BadRequestException(`Question ${index + 1} must have marks greater than 0`);
+      }
+
+      const questionData = {
+        question: question.question.trim(),
+        questionType: question.questionType,
+        options: question.options || undefined,
+        correctAnswer: question.correctAnswer ? question.correctAnswer.trim() : undefined,
+        correctAnswerExplanation: question.correctAnswerExplanation || undefined,
+        marks: question.marks,
         quizId: savedQuiz.id,
         orderIndex: index,
-      } as any),
-    );
+      };
+      console.log(`Creating question ${index + 1}:`, JSON.stringify(questionData, null, 2));
+      return this.quizQuestionRepository.create(questionData);
+    });
 
-    await this.quizQuestionRepository.save(quizQuestions as any);
+    console.log('Attempting to save questions, count:', quizQuestions.length);
+    try {
+      const savedQuestions = await this.quizQuestionRepository.save(quizQuestions);
+      console.log('Questions saved successfully, count:', savedQuestions.length);
+      console.log('Saved question IDs:', savedQuestions.map(q => q.id));
+    } catch (error) {
+      console.error('Error saving questions:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        errno: error.errno,
+        sql: error.sql
+      });
+      throw new BadRequestException(`Failed to save questions: ${error.message}`);
+    }
 
     return this.findOne(savedQuiz.id);
   }
@@ -87,7 +149,7 @@ export class QuizzesService {
 
   async findByTeacher(teacherId: number) {
     return this.quizRepository.find({
-      where: { teacherId },
+      where: { teacherId, isActive: true },
       relations: ['questions'],
       order: { createdAt: 'DESC' },
     });
@@ -95,7 +157,7 @@ export class QuizzesService {
 
   async findOne(id: number): Promise<Quiz> {
     const quiz = await this.quizRepository.findOne({
-      where: { id },
+      where: { id, isActive: true },
       relations: ['teacher', 'teacher.user', 'questions'],
     });
 
@@ -107,6 +169,70 @@ export class QuizzesService {
     quiz.questions.sort((a, b) => a.orderIndex - b.orderIndex);
 
     return quiz;
+  }
+
+  async update(id: number, updateQuizDto: CreateQuizDto, user: User): Promise<Quiz> {
+    // Find the existing quiz
+    const existingQuiz = await this.quizRepository.findOne({
+      where: { id },
+      relations: ['questions'],
+    });
+
+    if (!existingQuiz) {
+      throw new NotFoundException('Quiz not found');
+    }
+
+    // Check permissions - only quiz owner (teacher) or admin can update
+    if (user.role === UserRole.TEACHER) {
+      const teacher = await this.teachersService.findByUserId(user.id);
+      if (existingQuiz.teacherId !== teacher.id) {
+        throw new ForbiddenException('You can only update your own quizzes');
+      }
+    } else if (user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only teachers and admins can update quizzes');
+    }
+
+    const { questions, ...quizData } = updateQuizDto;
+
+    // Calculate total marks
+    const totalMarks = questions.reduce(
+      (sum, question) => sum + question.marks,
+      0,
+    );
+
+    // Update quiz data
+    await this.quizRepository.update(id, {
+      ...quizData,
+      totalMarks,
+    });
+
+    // Delete existing questions
+    await this.quizQuestionRepository.delete({ quizId: id });
+
+    // Create new questions
+    console.log('Creating updated questions for quiz:', id);
+    console.log('Questions to create:', questions);
+    
+    const quizQuestions = questions.map((question, index) => {
+      const questionData = {
+        question: question.question,
+        questionType: question.questionType,
+        options: question.options || undefined,
+        correctAnswer: question.correctAnswer ? question.correctAnswer.trim() : undefined,
+        correctAnswerExplanation: question.correctAnswerExplanation || undefined,
+        marks: question.marks,
+        quizId: id,
+        orderIndex: index,
+      };
+      console.log(`Creating updated question ${index + 1}:`, questionData);
+      return this.quizQuestionRepository.create(questionData);
+    });
+
+    console.log('Saving updated questions:', quizQuestions.length);
+    const savedQuestions = await this.quizQuestionRepository.save(quizQuestions);
+    console.log('Updated questions saved successfully:', savedQuestions.length);
+
+    return this.findOne(id);
   }
 
   async assignQuiz(
@@ -344,14 +470,22 @@ export class QuizzesService {
   }
 
   async delete(id: number, user: User): Promise<void> {
-    if (user.role !== UserRole.TEACHER) {
-      throw new ForbiddenException('Only teachers can delete quizzes');
+    if (user.role !== UserRole.TEACHER && user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only teachers and admins can delete quizzes');
     }
 
-    const teacher = await this.teachersService.findByUserId(user.id);
-    const quiz = await this.quizRepository.findOne({
-      where: { id, teacherId: teacher.id },
-    });
+    let quiz;
+    if (user.role === UserRole.TEACHER) {
+      const teacher = await this.teachersService.findByUserId(user.id);
+      quiz = await this.quizRepository.findOne({
+        where: { id, teacherId: teacher.id },
+      });
+    } else {
+      // Admin can delete any quiz
+      quiz = await this.quizRepository.findOne({
+        where: { id },
+      });
+    }
 
     if (!quiz) {
       throw new NotFoundException(

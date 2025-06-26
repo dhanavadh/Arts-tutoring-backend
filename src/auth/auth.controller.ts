@@ -18,20 +18,18 @@ export class AuthController {
   async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) response: Response) {
     const result = await this.authService.login(loginDto);
     
-    // Set access token in httpOnly cookie
-    response.cookie('access_token', result.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    // Return user data without the token
-    const { accessToken, ...userResponse } = result;
+    // Temporarily return the token in the response for testing
+    console.log('🍪 Login successful for user:', result.user?.email);
+    console.log('🍪 Access token length:', result.accessToken?.length);
+    
+    // Return user data WITH the token for frontend storage
     return {
       success: true,
       message: 'Login successful',
-      data: userResponse,
+      data: {
+        user: result.user,
+        accessToken: result.accessToken, // Include token for frontend storage
+      },
     };
   }
 
@@ -53,8 +51,10 @@ export class AuthController {
     response.cookie('access_token', result.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      domain: undefined,
+      path: '/',
     });
 
     // Return user data without the token
@@ -98,8 +98,10 @@ export class AuthController {
     response.cookie('access_token', result.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      domain: undefined,
+      path: '/',
     });
 
     // Return user data without the token

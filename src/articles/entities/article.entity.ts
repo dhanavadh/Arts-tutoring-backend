@@ -5,8 +5,6 @@ import {
   ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
-  BeforeInsert,
-  BeforeUpdate,
 } from 'typeorm';
 import { Teacher } from '../../teachers/entities/teacher.entity';
 
@@ -21,10 +19,10 @@ export class Article {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Teacher, (teacher) => teacher.articles)
+  @ManyToOne(() => Teacher, (teacher) => teacher.articles, { nullable: true })
   teacher: Teacher;
 
-  @Column({ name: 'teacher_id' })
+  @Column({ name: 'teacher_id', nullable: true })
   teacherId: number;
 
   @Column()
@@ -62,15 +60,4 @@ export class Article {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
-
-  @BeforeInsert()
-  @BeforeUpdate()
-  generateSlug() {
-    if (this.title) {
-      this.slug = this.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
-    }
-  }
 }

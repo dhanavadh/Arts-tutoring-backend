@@ -3,10 +3,13 @@ import {
   PrimaryGeneratedColumn,
   Column,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { QuizQuestion } from './quiz-question.entity';
+import { Teacher } from '../../teachers/entities/teacher.entity';
 
 @Entity('quizzes')
 export class Quiz {
@@ -28,8 +31,12 @@ export class Quiz {
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
-  @Column({ name: 'teacher_id' })
-  teacherId: number;
+  @Column({ name: 'teacher_id', type: 'int', nullable: true })
+  teacherId: number | null;
+
+  @ManyToOne(() => Teacher, { nullable: true })
+  @JoinColumn({ name: 'teacher_id' })
+  teacher?: Teacher;
 
   @Column({ name: 'total_marks', default: 0 })
   totalMarks: number;
