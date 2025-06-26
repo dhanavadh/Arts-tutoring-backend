@@ -27,7 +27,9 @@ import { OtpModule } from './otp/otp.module';
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'student_teacher_system',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: process.env.NODE_ENV === 'development',
+      migrations: [__dirname + '/migrations/*{.ts,.js}'],
+      synchronize: false, // Disabled to prevent automatic schema changes
+      migrationsRun: true, // Run migrations automatically on startup
       logging: process.env.NODE_ENV === 'development',
     }),
     AuthModule,

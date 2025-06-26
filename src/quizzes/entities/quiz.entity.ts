@@ -31,6 +31,13 @@ export class Quiz {
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
+  @Column({ 
+    type: 'enum', 
+    enum: ['draft', 'published', 'archived'], 
+    default: 'draft' 
+  })
+  status: 'draft' | 'published' | 'archived';
+
   @Column({ name: 'teacher_id', type: 'int', nullable: true })
   teacherId: number | null;
 

@@ -257,6 +257,9 @@ export class QuizzesService {
       );
     }
 
+    // Allow assignment of quizzes in any status (draft, published, etc.)
+    // Teachers can assign draft quizzes and publish them later
+
     // Create assignments for each student
     const assignments = studentIds.map((studentId) =>
       this.quizAssignmentRepository.create({
@@ -270,11 +273,99 @@ export class QuizzesService {
     return this.quizAssignmentRepository.save(assignments as any);
   }
 
+  async getQuizAssignments(quizId: number, user: User): Promise<any[]> {
+    if (user.role !== UserRole.TEACHER && user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only teachers and admins can view quiz assignments');
+    }
+
+    let quiz;
+    if (user.role === UserRole.TEACHER) {
+      const teacher = await this.teachersService.findByUserId(user.id);
+      quiz = await this.quizRepository.findOne({
+        where: { id: quizId, teacherId: teacher.id },
+      });
+    } else {
+      quiz = await this.quizRepository.findOne({
+        where: { id: quizId },
+      });
+    }
+
+    if (!quiz) {
+      throw new NotFoundException('Quiz not found or you do not have permission');
+    }
+
+    const assignments = await this.quizAssignmentRepository.find({
+      where: { quizId },
+      relations: ['student', 'student.user'],
+    });
+
+    return assignments.map(assignment => ({
+      id: assignment.id,
+      studentId: assignment.studentId,
+      student: {
+        id: assignment.student.id,
+        user: {
+          firstName: assignment.student.user.firstName,
+          lastName: assignment.student.user.lastName,
+          email: assignment.student.user.email,
+        },
+        grade: assignment.student.grade,
+        school: assignment.student.school,
+      },
+      assignedAt: assignment.assignedAt,
+      dueDate: assignment.dueDate,
+      status: assignment.status,
+    }));
+  }
+
+  async removeQuizAssignment(quizId: number, studentId: number, user: User): Promise<{ message: string }> {
+    if (user.role !== UserRole.TEACHER && user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only teachers and admins can remove quiz assignments');
+    }
+
+    let quiz;
+    if (user.role === UserRole.TEACHER) {
+      const teacher = await this.teachersService.findByUserId(user.id);
+      quiz = await this.quizRepository.findOne({
+        where: { id: quizId, teacherId: teacher.id },
+      });
+    } else {
+      quiz = await this.quizRepository.findOne({
+        where: { id: quizId },
+      });
+    }
+
+    if (!quiz) {
+      throw new NotFoundException('Quiz not found or you do not have permission');
+    }
+
+    const assignment = await this.quizAssignmentRepository.findOne({
+      where: { quizId, studentId },
+      relations: ['attempts'],
+    });
+
+    if (!assignment) {
+      throw new NotFoundException('Assignment not found');
+    }
+
+    // Check if student has already attempted the quiz
+    if (assignment.attempts && assignment.attempts.length > 0) {
+      throw new BadRequestException('Cannot remove assignment - student has already attempted the quiz');
+    }
+
+    await this.quizAssignmentRepository.delete({ quizId, studentId });
+
+    return { message: 'Assignment removed successfully' };
+  }
+
   async getAssignedQuizzes(userId: number): Promise<QuizAssignment[]> {
     const student = await this.studentsService.findByUserId(userId);
 
     return this.quizAssignmentRepository.find({
-      where: { studentId: student.id },
+      where: { 
+        studentId: student.id,
+        quiz: { status: 'published' } // Only show published quizzes to students
+      },
       relations: ['quiz', 'quiz.teacher', 'quiz.teacher.user', 'attempts'],
       order: { assignedAt: 'DESC' },
     });
@@ -293,6 +384,11 @@ export class QuizzesService {
 
     if (!assignment) {
       throw new NotFoundException('Quiz assignment not found');
+    }
+
+    // Check if quiz is published (students can only take published quizzes)
+    if (assignment.quiz.status !== 'published') {
+      throw new BadRequestException('This quiz is not yet available for students');
     }
 
     // Check if already attempted
@@ -495,5 +591,74 @@ export class QuizzesService {
 
     quiz.isActive = false;
     await this.quizRepository.save(quiz);
+  }
+
+  async publishQuiz(id: number, user: User): Promise<Quiz> {
+    let quiz: Quiz | null;
+
+    if (user.role === UserRole.TEACHER) {
+      const teacher = await this.teachersService.findByUserId(user.id);
+      quiz = await this.quizRepository.findOne({
+        where: { id, teacherId: teacher.id },
+      });
+    } else {
+      // Admin can publish any quiz
+      quiz = await this.quizRepository.findOne({
+        where: { id },
+      });
+    }
+
+    if (!quiz) {
+      throw new NotFoundException(
+        'Quiz not found or you do not have permission',
+      );
+    }
+
+    if (quiz.status === 'published') {
+      throw new BadRequestException('Quiz is already published');
+    }
+
+    // Check if quiz has been assigned to at least one student
+    const assignmentCount = await this.quizAssignmentRepository.count({
+      where: { quizId: id },
+    });
+
+    if (assignmentCount === 0) {
+      throw new BadRequestException(
+        'Cannot publish quiz. Please assign the quiz to at least one student before publishing.',
+      );
+    }
+
+    quiz.status = 'published';
+    return await this.quizRepository.save(quiz);
+  }
+
+  async unpublishQuiz(id: number, user: User): Promise<Quiz> {
+    let quiz: Quiz | null;
+
+    if (user.role === UserRole.TEACHER) {
+      const teacher = await this.teachersService.findByUserId(user.id);
+      quiz = await this.quizRepository.findOne({
+        where: { id, teacherId: teacher.id },
+      });
+    } else {
+      // Admin can unpublish any quiz
+      quiz = await this.quizRepository.findOne({
+        where: { id },
+      });
+    }
+
+    if (!quiz) {
+      throw new NotFoundException(
+        'Quiz not found or you do not have permission',
+      );
+    }
+
+    if (quiz.status !== 'published') {
+      throw new BadRequestException('Quiz is not published');
+    }
+
+    quiz.status = 'draft';
+    return await this.quizRepository.save(quiz);
   }
 }

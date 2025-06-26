@@ -72,6 +72,16 @@ export class QuizzesController {
     return this.quizzesService.update(id, updateQuizDto, user);
   }
 
+  @Get(':id/assignments')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  getQuizAssignments(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: User,
+  ) {
+    return this.quizzesService.getQuizAssignments(id, user);
+  }
+
   @Post(':id/assign')
   @UseGuards(RolesGuard)
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
@@ -82,6 +92,17 @@ export class QuizzesController {
   ) {
     assignQuizDto.quizId = id;
     return this.quizzesService.assignQuiz(assignQuizDto, user);
+  }
+
+  @Delete(':id/assignments/:studentId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  removeQuizAssignment(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('studentId', ParseIntPipe) studentId: number,
+    @CurrentUser() user: User,
+  ) {
+    return this.quizzesService.removeQuizAssignment(id, studentId, user);
   }
 
   @Post('assignments/:assignmentId/attempt')
@@ -124,6 +145,26 @@ export class QuizzesController {
     @CurrentUser() user: User,
   ) {
     return this.quizzesService.getQuizResults(id, user);
+  }
+
+  @Patch(':id/publish')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  publishQuiz(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: User,
+  ) {
+    return this.quizzesService.publishQuiz(id, user);
+  }
+
+  @Patch(':id/unpublish')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  unpublishQuiz(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: User,
+  ) {
+    return this.quizzesService.unpublishQuiz(id, user);
   }
 
   @Delete(':id')

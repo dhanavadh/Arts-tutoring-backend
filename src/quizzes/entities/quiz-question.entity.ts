@@ -28,7 +28,7 @@ export class QuizQuestion {
   @Column({ name: 'quiz_id' })
   quizId: number;
 
-  @Column()
+  @Column({ type: 'text' })
   question: string;
 
   @Column({ type: 'enum', enum: QuestionType })
@@ -37,10 +37,10 @@ export class QuizQuestion {
   @Column({ type: 'json', nullable: true })
   options: string[];
 
-  @Column({ name: 'correct_answer', nullable: true })
+  @Column({ name: 'correct_answer', type: 'text', nullable: true })
   correctAnswer: string;
 
-  @Column({ name: 'correct_answer_explanation', nullable: true })
+  @Column({ name: 'correct_answer_explanation', type: 'text', nullable: true })
   correctAnswerExplanation: string;
 
   @Column({ default: 1 })

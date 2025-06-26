@@ -57,6 +57,10 @@ export class CreateQuizDto {
   @IsPositive()
   timeLimit?: number;
 
+  @IsOptional()
+  @IsEnum(['draft', 'published', 'archived'])
+  status?: 'draft' | 'published' | 'archived';
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateQuestionDto)

@@ -36,8 +36,6 @@ export class Teacher {
   @Column({ name: 'years_experience', default: 0 })
   yearsExperience: number;
 
-  @Column({ type: 'json', nullable: true })
-  qualifications: string[];
 
   @Column({ name: 'is_verified', default: false })
   isVerified: boolean;
