@@ -98,7 +98,7 @@ export class UsersController {
 
     return this.usersService.updateProfileImage(
       user.id,
-      `/uploads/${fileUpload.filename}`,
+      `/uploads/profiles/${fileUpload.filename}`,
     );
   }
 

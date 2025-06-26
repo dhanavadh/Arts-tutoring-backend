@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { VerifyOtpDto } from '../otp/dto/verify-otp.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
@@ -38,7 +39,17 @@ export class AuthController {
   async register(@Body() registerDto: RegisterDto, @Res({ passthrough: true }) response: Response) {
     const result = await this.authService.register(registerDto);
     
-    // Set access token in httpOnly cookie
+    // If user requires verification, don't set cookie
+    if (result.requiresVerification) {
+      return {
+        success: true,
+        message: result.message,
+        requiresVerification: true,
+        data: { user: result.user },
+      };
+    }
+
+    // Set access token in httpOnly cookie for admin users
     response.cookie('access_token', result.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -75,6 +86,28 @@ export class AuthController {
     return {
       success: true,
       message: 'Logout successful',
+    };
+  }
+
+  @Post('verify-registration')
+  @HttpCode(200)
+  async verifyRegistration(@Body() verifyOtpDto: VerifyOtpDto, @Res({ passthrough: true }) response: Response) {
+    const result = await this.authService.verifyRegistration(verifyOtpDto);
+    
+    // Set access token in httpOnly cookie
+    response.cookie('access_token', result.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // Return user data without the token
+    const { accessToken, ...userResponse } = result;
+    return {
+      success: true,
+      message: 'Account verified successfully',
+      data: userResponse,
     };
   }
 

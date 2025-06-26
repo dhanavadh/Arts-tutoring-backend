@@ -32,6 +32,10 @@ export class CreateUserDto {
   isActive?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  isVerified?: boolean;
+
+  @IsOptional()
   @IsString()
   profileImage?: string;
 }

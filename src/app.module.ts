@@ -2,9 +2,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { MulterModule } from '@nestjs/platform-express';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { TeachersModule } from './teachers/teachers.module';
@@ -14,15 +11,13 @@ import { QuizzesModule } from './quizzes/quizzes.module';
 import { ArticlesModule } from './articles/articles.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { AdminModule } from './admin/admin.module';
+import { EmailModule } from './email/email.module';
+import { OtpModule } from './otp/otp.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-    }),
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'uploads'),
-      serveRoot: '/uploads',
     }),
     TypeOrmModule.forRoot({
       type: 'mysql',
@@ -44,6 +39,8 @@ import { AdminModule } from './admin/admin.module';
     ArticlesModule,
     UploadsModule,
     AdminModule,
+    EmailModule,
+    OtpModule,
   ],
 })
 export class AppModule {}

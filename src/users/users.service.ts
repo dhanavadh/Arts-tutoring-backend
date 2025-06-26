@@ -88,6 +88,10 @@ export class UsersService {
     await this.userRepository.update(id, { password: hashedPassword });
   }
 
+  async updateVerificationStatus(id: number, isVerified: boolean): Promise<void> {
+    await this.userRepository.update(id, { isVerified });
+  }
+
   async updateProfileImage(id: number, profileImage: string): Promise<User> {
     await this.userRepository.update(id, { profileImage });
     return this.findById(id);
