@@ -1,3 +1,4 @@
+import './env.config'; // Load environment variables first
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 
 export const databaseConfig: TypeOrmModuleOptions = {
@@ -12,4 +13,17 @@ export const databaseConfig: TypeOrmModuleOptions = {
   logging: process.env.NODE_ENV === 'development',
   timezone: '+00:00',
   charset: 'utf8mb4',
+  // Connection pool configuration
+  extra: {
+    connectionLimit: 10,
+    acquireTimeout: 60000,
+    timeout: 60000,
+    reconnect: true,
+    idleTimeout: 300000, // 5 minutes
+  },
+  // Retry configuration
+  retryAttempts: 3,
+  retryDelay: 3000,
+  // Query timeout
+  maxQueryExecutionTime: 30000, // 30 seconds
 };

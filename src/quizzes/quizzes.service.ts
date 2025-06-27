@@ -1,15 +1,19 @@
 // src/quizzes/quizzes.service.ts
 import {
+  BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
-  ForbiddenException,
-  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Quiz } from './entities/quiz.entity';
 import { QuizQuestion } from './entities/quiz-question.entity';
-import { QuizAssignment, AssignmentStatus } from './entities/quiz-assignment.entity';
+import { QuestionType } from './entities/question-type.enum';
+import {
+  QuizAssignment,
+  AssignmentStatus,
+} from './entities/quiz-assignment.entity';
 import { QuizAttempt } from './entities/quiz-attempt.entity';
 import { CreateQuizDto } from './dto/create-quiz.dto';
 import { AssignQuizDto } from './dto/assign-quiz.dto';
@@ -17,6 +21,8 @@ import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { User, UserRole } from '../users/entities/user.entity';
 import { TeachersService } from '../teachers/teachers.service';
 import { StudentsService } from '../students/students.service';
+import { Student } from '../students/entities/student.entity';
+import { DatabaseHealthService } from '../common/database-health.service';
 
 @Injectable()
 export class QuizzesService {
@@ -31,6 +37,7 @@ export class QuizzesService {
     private quizAttemptRepository: Repository<QuizAttempt>,
     private teachersService: TeachersService,
     private studentsService: StudentsService,
+    private databaseHealthService: DatabaseHealthService,
   ) {}
 
   async create(createQuizDto: CreateQuizDto, user: User): Promise<Quiz> {
@@ -44,105 +51,173 @@ export class QuizzesService {
       const teacher = await this.teachersService.findByUserId(user.id);
       teacherId = teacher.id;
     } else {
-      // For admin users, set teacherId to null or create a default teacher entry
-      // For simplicity, we'll set it to null and handle it in the entity
       teacherId = null;
     }
 
     const { questions, ...quizData } = createQuizDto;
 
+    console.log('Creating quiz with data:', {
+      ...quizData,
+      teacherId,
+      questionCount: questions?.length || 0
+    });
+
     // Calculate total marks
     const totalMarks = questions.reduce(
-      (sum, question) => sum + question.marks,
+      (sum, question) => sum + (question.marks || 0),
       0,
     );
 
+    // Create and save the quiz first
     const quiz = this.quizRepository.create({
       ...quizData,
       teacherId,
       totalMarks,
+      status: quizData.status || 'draft',
+      isActive: true,
     });
 
-    let savedQuiz;
+    let savedQuiz: Quiz;
     try {
-      savedQuiz = await this.quizRepository.save(quiz) as Quiz;
-      console.log('Quiz saved successfully with ID:', savedQuiz.id);
+      savedQuiz = await this.quizRepository.save(quiz);
+      console.log('Quiz saved successfully:', {
+        id: savedQuiz.id,
+        title: savedQuiz.title,
+        status: savedQuiz.status,
+        teacherId: savedQuiz.teacherId,
+        totalMarks: savedQuiz.totalMarks,
+      });
     } catch (error) {
       console.error('Error saving quiz:', error);
       throw new BadRequestException(`Failed to save quiz: ${error.message}`);
     }
 
-    // Create questions
-    console.log('Creating questions for quiz:', savedQuiz.id);
-    console.log('Questions to create:', JSON.stringify(questions, null, 2));
-    
-    if (!questions || questions.length === 0) {
-      console.log('No questions provided, returning quiz without questions');
-      return this.findOne(savedQuiz.id);
-    }
+    // Create and save questions if provided
+    if (questions?.length > 0) {
+      console.log(`Creating ${questions.length} questions for quiz ${savedQuiz.id}`);
+      
+      const quizQuestions = questions.map((question, index) => {
+        // Validate required fields
+        if (!question.question?.trim()) {
+          throw new BadRequestException(`Question ${index + 1} is missing question text`);
+        }
+        
+        // Validate question type
+        if (!Object.values(QuestionType).includes(question.questionType as QuestionType)) {
+          throw new BadRequestException(
+            `Question ${index + 1} has invalid question type. Must be one of: ${Object.values(QuestionType).join(', ')}`,
+          );
+        }
 
-    const quizQuestions = questions.map((question, index) => {
-      // Validate required fields
-      if (!question.question || !question.question.trim()) {
-        throw new BadRequestException(`Question ${index + 1} is missing question text`);
-      }
-      if (!question.questionType) {
-        throw new BadRequestException(`Question ${index + 1} is missing question type`);
-      }
-      // Only require correct answer for multiple choice and true/false questions
-      if ((question.questionType === 'multiple_choice' || question.questionType === 'true_false') && 
-          (!question.correctAnswer || !question.correctAnswer.trim())) {
-        throw new BadRequestException(`Question ${index + 1} must have a correct answer for ${question.questionType} questions`);
-      }
-      if (!question.marks || question.marks <= 0) {
-        throw new BadRequestException(`Question ${index + 1} must have marks greater than 0`);
-      }
+        // Validate correct answer for MC and T/F questions
+        if (
+          [QuestionType.MULTIPLE_CHOICE, QuestionType.TRUE_FALSE].includes(
+            question.questionType as QuestionType,
+          ) &&
+          !question.correctAnswer?.trim()
+        ) {
+          throw new BadRequestException(
+            `Question ${index + 1} must have a correct answer for ${question.questionType} questions`,
+          );
+        }
 
-      const questionData = {
-        question: question.question.trim(),
-        questionType: question.questionType,
-        options: question.options || undefined,
-        correctAnswer: question.correctAnswer ? question.correctAnswer.trim() : undefined,
-        correctAnswerExplanation: question.correctAnswerExplanation || undefined,
-        marks: question.marks,
-        quizId: savedQuiz.id,
-        orderIndex: index,
-      };
-      console.log(`Creating question ${index + 1}:`, JSON.stringify(questionData, null, 2));
-      return this.quizQuestionRepository.create(questionData);
-    });
+        if (!question.marks || question.marks <= 0) {
+          throw new BadRequestException(
+            `Question ${index + 1} must have marks greater than 0`,
+          );
+        }
 
-    console.log('Attempting to save questions, count:', quizQuestions.length);
-    try {
-      const savedQuestions = await this.quizQuestionRepository.save(quizQuestions);
-      console.log('Questions saved successfully, count:', savedQuestions.length);
-      console.log('Saved question IDs:', savedQuestions.map(q => q.id));
-    } catch (error) {
-      console.error('Error saving questions:', error);
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        errno: error.errno,
-        sql: error.sql
+        const questionEntity = this.quizQuestionRepository.create({
+          quiz: savedQuiz, // Set the quiz relationship
+          question: question.question.trim(),
+          questionType: question.questionType as QuestionType,
+          options: question.options || [],
+          correctAnswer: question.correctAnswer?.trim(),
+          correctAnswerExplanation: question.correctAnswerExplanation?.trim(),
+          marks: question.marks,
+          orderIndex: index,
+        });
+
+        return questionEntity;
       });
-      throw new BadRequestException(`Failed to save questions: ${error.message}`);
+
+      try {
+        const savedQuestions = await this.quizQuestionRepository.save(quizQuestions);
+        console.log(
+          'Questions saved successfully:',
+          {
+            count: savedQuestions.length,
+            ids: savedQuestions.map((q) => q.id),
+            totalMarks: savedQuestions.reduce((sum, q) => sum + q.marks, 0),
+          },
+        );
+
+        // Update quiz total marks in case it changed during question creation
+        const actualTotalMarks = savedQuestions.reduce((sum, q) => sum + q.marks, 0);
+        if (actualTotalMarks !== savedQuiz.totalMarks) {
+          console.log(
+            `Updating quiz total marks from ${savedQuiz.totalMarks} to ${actualTotalMarks}`,
+          );
+          await this.quizRepository.update(savedQuiz.id, {
+            totalMarks: actualTotalMarks,
+          });
+        }
+      } catch (error: unknown) {
+        const err = error as Error;
+        console.error('Error saving questions:', {
+          error: err.name,
+          message: err.message,
+          stack: err.stack,
+        });
+        // Delete the quiz since question creation failed
+        await this.quizRepository.delete(savedQuiz.id);
+        throw new BadRequestException(
+          `Failed to save questions: ${err.message}`,
+        );
+      }
     }
 
+    // Return the complete quiz with questions
     return this.findOne(savedQuiz.id);
   }
 
   async findAll(page: number = 1, limit: number = 10) {
-    const [quizzes, total] = await this.quizRepository.findAndCount({
-      where: { isActive: true },
-      skip: (page - 1) * limit,
-      take: limit,
-      order: { createdAt: 'DESC' },
+    console.log('Finding all active quizzes with pagination:', { page, limit });
+    
+    const [quizzes, total] = await this.quizRepository
+      .createQueryBuilder('quiz')
+      .where('quiz.isActive = :isActive', { isActive: true })
+      .leftJoinAndSelect('quiz.teacher', 'teacher')
+      .leftJoinAndSelect('teacher.user', 'teacherUser')
+      .leftJoinAndSelect('quiz.questions', 'questions')
+      .leftJoinAndSelect('quiz.assignments', 'assignments')
+      .leftJoinAndSelect('assignments.student', 'student')
+      .leftJoinAndSelect('student.user', 'studentUser')
+      .orderBy('quiz.createdAt', 'DESC')
+      .addOrderBy('questions.orderIndex', 'ASC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    console.log('Found quizzes:', {
+      total,
+      withQuestions: quizzes.filter(q => q.questions?.length > 0).length,
+      withAssignments: quizzes.filter(q => q.assignments?.length > 0).length,
+      quizzes: quizzes.map(q => ({
+        id: q.id,
+        title: q.title,
+        status: q.status,
+        questionCount: q.questions?.length || 0,
+        totalMarks: q.questions?.reduce((sum, question) => sum + (question.marks || 0), 0) || 0,
+        assignmentCount: q.assignments?.length || 0,
+      })),
     });
 
     return {
-      quizzes,
+      data: quizzes,
       total,
       page,
+      limit,
       totalPages: Math.ceil(total / limit),
     };
   }
@@ -156,17 +231,71 @@ export class QuizzesService {
   }
 
   async findOne(id: number): Promise<Quiz> {
-    const quiz = await this.quizRepository.findOne({
-      where: { id, isActive: true },
-      relations: ['teacher', 'teacher.user', 'questions'],
+    console.log('Finding quiz with ID:', id);
+    
+    // Use database health service for critical quiz lookup with retry
+    const quiz = await this.databaseHealthService.executeWithRetry(async () => {
+      return this.quizRepository
+        .createQueryBuilder('quiz')
+        .leftJoinAndSelect('quiz.questions', 'questions')
+        .leftJoinAndSelect('quiz.assignments', 'assignments')
+        .leftJoinAndSelect('assignments.student', 'student')
+        .leftJoinAndSelect('student.user', 'studentUser')
+        .leftJoinAndSelect('quiz.teacher', 'teacher')
+        .leftJoinAndSelect('teacher.user', 'teacherUser')
+        .where('quiz.id = :id', { id })
+        .andWhere('quiz.isActive = :isActive', { isActive: true })
+        .orderBy('questions.orderIndex', 'ASC')
+        .getOne();
     });
 
     if (!quiz) {
       throw new NotFoundException('Quiz not found');
     }
 
-    // Sort questions by order
-    quiz.questions.sort((a, b) => a.orderIndex - b.orderIndex);
+    // Debug logging
+    console.log('Quiz found:', {
+      id: quiz.id,
+      title: quiz.title,
+      questionCount: quiz.questions?.length || 0,
+      totalMarks: quiz.totalMarks,
+      assignmentCount: quiz.assignments?.length || 0,
+      teacherId: quiz.teacherId,
+      status: quiz.status,
+      isActive: quiz.isActive,
+    });
+
+    if (quiz.questions?.length > 0) {
+      console.log(
+        'Quiz questions:',
+        quiz.questions.map((q) => ({
+          id: q.id,
+          text: q.question.substring(0, 30) + '...',
+          type: q.questionType,
+          marks: q.marks,
+          orderIndex: q.orderIndex,
+        })),
+      );
+    } else {
+      console.log('Quiz has no questions');
+    }
+
+    if (quiz.assignments?.length > 0) {
+      console.log(
+        'Quiz assignments:',
+        quiz.assignments.map((a) => ({
+          id: a.id,
+          studentId: a.student?.id,
+          studentName: a.student?.user
+            ? `${a.student.user.firstName} ${a.student.user.lastName}`
+            : 'Unknown',
+          status: a.status,
+          dueDate: a.dueDate,
+        })),
+      );
+    } else {
+      console.log('Quiz has no assignments');
+    }
 
     return quiz;
   }
@@ -239,38 +368,152 @@ export class QuizzesService {
     assignQuizDto: AssignQuizDto,
     user: User,
   ): Promise<QuizAssignment[]> {
-    if (user.role !== UserRole.TEACHER) {
-      throw new ForbiddenException('Only teachers can assign quizzes');
-    }
-
-    const { quizId, studentIds, dueDate } = assignQuizDto;
-    const teacher = await this.teachersService.findByUserId(user.id);
-
-    // Verify quiz exists and belongs to teacher
-    const quiz = await this.quizRepository.findOne({
-      where: { id: quizId, teacherId: teacher.id },
-    });
-
-    if (!quiz) {
-      throw new NotFoundException(
-        'Quiz not found or you do not have permission',
+    console.log('Assigning quiz:', assignQuizDto);
+    
+    if (user.role !== UserRole.TEACHER && user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'Only teachers and admins can assign quizzes',
       );
     }
 
-    // Allow assignment of quizzes in any status (draft, published, etc.)
-    // Teachers can assign draft quizzes and publish them later
+    const { quizId, studentIds, dueDate } = assignQuizDto;
 
-    // Create assignments for each student
-    const assignments = studentIds.map((studentId) =>
-      this.quizAssignmentRepository.create({
-        quizId,
-        studentId,
-        assignedBy: teacher.id,
-        dueDate: dueDate ? new Date(dueDate) : null,
-      } as any),
+    // Verify that the quiz exists and is active (can be draft or published for assignment)
+    const quiz = await this.quizRepository.findOne({
+      where: { 
+        id: quizId, 
+        isActive: true,
+        status: In(['draft', 'published']), // Allow assignment to draft and published quizzes
+      },
+    });
+
+    if (!quiz) {
+      throw new NotFoundException('Quiz not found or not active');
+    }
+
+    // Get teacher ID and teacher entity
+    let teacherId: number;
+    let assigningTeacher: any = null;
+    if (user.role === UserRole.TEACHER) {
+      const teacher = await this.teachersService.findByUserId(user.id);
+      teacherId = teacher.id;
+      assigningTeacher = teacher;
+    } else {
+      // For admin, use the quiz's teacher ID or assign to a default teacher
+      teacherId = quiz.teacherId || 1;
+      if (quiz.teacherId) {
+        try {
+          assigningTeacher = await this.teachersService.findById(quiz.teacherId);
+        } catch (error) {
+          console.warn('Could not find teacher for admin assignment:', error);
+        }
+      }
+    }
+
+    // Verify that each student exists
+    const foundStudents = await Promise.all(
+      studentIds.map(async (id) => {
+        try {
+          return await this.studentsService.findById(id);
+        } catch (error) {
+          console.error(`Student with ID ${id} not found:`, error);
+          return null;
+        }
+      }),
     );
 
-    return this.quizAssignmentRepository.save(assignments as any);
+    // Filter out any null results from student lookups
+    let validStudents = foundStudents.filter((student): student is Student => student !== null);
+
+    if (validStudents.length !== studentIds.length) {
+      const foundIds = validStudents.map((s) => s.id);
+      const missingIds = studentIds.filter((id) => !foundIds.includes(id));
+      throw new NotFoundException(
+        `Students not found: ${missingIds.join(', ')}`,
+      );
+    }
+
+    console.log(
+      'Creating assignments for students:',
+      validStudents.map((s) => s.id),
+    );
+
+    // Check for existing assignments
+    const existingAssignments = await this.quizAssignmentRepository.find({
+      where: { 
+        quizId,
+        studentId: In(validStudents.map((s) => s.id)),
+      },
+    });
+
+    if (existingAssignments.length > 0) {
+      const existingStudentIds = existingAssignments.map(a => a.studentId);
+      console.log('Found existing assignments for students:', existingStudentIds);
+      // Filter out students that already have assignments
+      validStudents = validStudents.filter(s => !existingStudentIds.includes(s.id));
+      
+      if (validStudents.length === 0) {
+        throw new BadRequestException('All selected students already have assignments for this quiz');
+      }
+    }
+
+    // Create new assignments
+    const assignments = validStudents.map((student) => {
+      const assignment = this.quizAssignmentRepository.create({
+        quiz,  // Set the full quiz entity
+        quizId,
+        student, // Set the full student entity
+        studentId: student.id,
+        assignedBy: teacherId,
+        assignedAt: new Date(),
+        dueDate: dueDate ? new Date(dueDate) : null,
+        status: AssignmentStatus.ASSIGNED,
+      });
+      console.log('Created assignment:', {
+        id: assignment.id,
+        quizId: assignment.quizId,
+        studentId: assignment.studentId,
+        assignedBy: assignment.assignedBy,
+        status: assignment.status
+      });
+      return assignment;
+    });
+
+    try {
+      console.log('Saving assignments for students:', validStudents.map(s => s.id));
+      const savedAssignments = await this.quizAssignmentRepository.save(assignments);
+      console.log('Saved assignments:', savedAssignments.length);
+      
+      // Load full assignment data with relationships
+      const fullAssignments = await this.quizAssignmentRepository
+        .createQueryBuilder('assignment')
+        .leftJoinAndSelect('assignment.quiz', 'quiz')
+        .leftJoinAndSelect('quiz.questions', 'questions')
+        .leftJoinAndSelect('assignment.student', 'student')
+        .leftJoinAndSelect('student.user', 'studentUser')
+        .where('assignment.id IN (:...ids)', {
+          ids: savedAssignments.map((a) => a.id),
+        })
+        .orderBy('assignment.assignedAt', 'DESC')
+        .addOrderBy('questions.orderIndex', 'ASC')
+        .getMany();
+
+      console.log('Retrieved full assignments:', {
+        count: fullAssignments.length,
+        assignments: fullAssignments.map(a => ({
+          id: a.id,
+          quizId: a.quizId,
+          studentId: a.studentId,
+          status: a.status,
+          questionCount: a.quiz?.questions?.length || 0
+        }))
+      });
+
+      return fullAssignments;
+    } catch (error) {
+      console.error('Error saving assignments:', error);
+      throw new BadRequestException(`Failed to save assignments: ${error.message}`);
+    }
   }
 
   async getQuizAssignments(quizId: number, user: User): Promise<any[]> {
@@ -294,28 +537,34 @@ export class QuizzesService {
       throw new NotFoundException('Quiz not found or you do not have permission');
     }
 
-    const assignments = await this.quizAssignmentRepository.find({
-      where: { quizId },
-      relations: ['student', 'student.user'],
-    });
+    const assignments = await this.quizAssignmentRepository
+      .createQueryBuilder('assignment')
+      .leftJoinAndSelect('assignment.student', 'student')
+      .leftJoinAndSelect('student.user', 'studentUser')
+      .where('assignment.quizId = :quizId', { quizId })
+      .getMany();
 
-    return assignments.map(assignment => ({
-      id: assignment.id,
-      studentId: assignment.studentId,
-      student: {
-        id: assignment.student.id,
-        user: {
-          firstName: assignment.student.user.firstName,
-          lastName: assignment.student.user.lastName,
-          email: assignment.student.user.email,
+    return assignments
+      .filter(assignment => assignment.student && assignment.student.user) // Filter out assignments with missing student data
+      .map(assignment => ({
+        id: assignment.id,
+        studentId: assignment.studentId,
+        student: {
+          id: assignment.student.id,
+          user: {
+            firstName: assignment.student.user.firstName,
+            lastName: assignment.student.user.lastName,
+            email: assignment.student.user.email,
+          },
+          schoolGrade: assignment.student.schoolGrade,
+          level: assignment.student.level,
         },
-        grade: assignment.student.grade,
-        school: assignment.student.school,
-      },
-      assignedAt: assignment.assignedAt,
-      dueDate: assignment.dueDate,
-      status: assignment.status,
-    }));
+        assignedAt: assignment.assignedAt,
+        assignedBy: assignment.assignedBy,
+        assignedByTeacher: null, // We'll fetch this separately if needed
+        dueDate: assignment.dueDate,
+        status: assignment.status,
+      }));
   }
 
   async removeQuizAssignment(quizId: number, studentId: number, user: User): Promise<{ message: string }> {
@@ -341,7 +590,6 @@ export class QuizzesService {
 
     const assignment = await this.quizAssignmentRepository.findOne({
       where: { quizId, studentId },
-      relations: ['attempts'],
     });
 
     if (!assignment) {
@@ -349,7 +597,7 @@ export class QuizzesService {
     }
 
     // Check if student has already attempted the quiz
-    if (assignment.attempts && assignment.attempts.length > 0) {
+    if (assignment.attempts > 0) {
       throw new BadRequestException('Cannot remove assignment - student has already attempted the quiz');
     }
 
@@ -359,16 +607,89 @@ export class QuizzesService {
   }
 
   async getAssignedQuizzes(userId: number): Promise<QuizAssignment[]> {
+    console.log('Getting assigned quizzes for user:', userId);
+    
     const student = await this.studentsService.findByUserId(userId);
+    console.log('Found student with ID:', student?.id);
 
-    return this.quizAssignmentRepository.find({
-      where: { 
-        studentId: student.id,
-        quiz: { status: 'published' } // Only show published quizzes to students
-      },
-      relations: ['quiz', 'quiz.teacher', 'quiz.teacher.user', 'attempts'],
-      order: { assignedAt: 'DESC' },
+    if (!student) {
+      console.log('No student record found for user:', userId);
+      return [];
+    }
+
+    // Use query builder for more complex joins and conditions
+    const assignments = await this.quizAssignmentRepository
+      .createQueryBuilder('assignment')
+      .leftJoinAndSelect('assignment.quiz', 'quiz')
+      .leftJoinAndSelect('quiz.questions', 'questions')
+      .leftJoinAndSelect('quiz.teacher', 'teacher')
+      .leftJoinAndSelect('teacher.user', 'teacherUser')
+      .where('assignment.studentId = :studentId', { studentId: student.id })
+      .andWhere('quiz.isActive = :isActive', { isActive: true })
+      .andWhere('quiz.status = :status', { status: 'published' })
+      .orderBy('assignment.assignedAt', 'DESC')
+      .getMany();
+
+    console.log('Found assignments:', {
+      total: assignments.length,
+      withQuiz: assignments.filter(a => a.quiz).length,
+      withQuestions: assignments.filter(a => a.quiz?.questions?.length > 0).length,
+      byStatus: assignments.reduce((acc, a) => {
+        acc[a.status] = (acc[a.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
     });
+
+    // Filter and map assignments to include only valid ones with questions
+    const validAssignments = assignments.filter((assignment) => {
+      const isValid =
+        assignment.quiz &&
+        assignment.quiz.isActive &&
+        assignment.quiz.status === 'published' &&
+        assignment.quiz.questions?.length > 0;
+      
+      if (!isValid) {
+        console.log('Filtering out invalid assignment:', {
+          id: assignment.id,
+          quizId: assignment.quizId,
+          hasQuiz: !!assignment.quiz,
+          quizActive: assignment.quiz?.isActive,
+          quizStatus: assignment.quiz?.status,
+          questionCount: assignment.quiz?.questions?.length || 0,
+          studentId: assignment.studentId,
+        });
+      }
+      
+      return isValid;
+    });
+
+    console.log('Returning valid assignments:', validAssignments.length);
+    return validAssignments;
+  }
+
+  async resetQuizAttempts(assignmentId: number, user: User) {
+    // Find the assignment
+    const assignment = await this.quizAssignmentRepository.findOne({
+      where: { id: assignmentId },
+      relations: ['quiz'],
+    });
+
+    if (!assignment) {
+      throw new NotFoundException('Quiz assignment not found');
+    }
+
+    // Reset attempts count to 0
+    assignment.attempts = 0;
+    assignment.status = AssignmentStatus.ASSIGNED;
+    
+    // Delete any existing quiz attempts for this assignment
+    await this.quizAttemptRepository.delete({
+      assignmentId: assignmentId,
+    });
+
+    await this.quizAssignmentRepository.save(assignment);
+    
+    return { message: 'Quiz attempts reset successfully', attempts: 0 };
   }
 
   async startQuizAttempt(
@@ -386,18 +707,18 @@ export class QuizzesService {
       throw new NotFoundException('Quiz assignment not found');
     }
 
-    // Check if quiz is published (students can only take published quizzes)
+    // Students can only take published quizzes
     if (assignment.quiz.status !== 'published') {
-      throw new BadRequestException('This quiz is not yet available for students');
+      throw new BadRequestException(
+        'This quiz is not yet published and cannot be taken',
+      );
     }
 
-    // Check if already attempted
-    const existingAttempt = await this.quizAttemptRepository.findOne({
-      where: { assignmentId },
-    });
-
-    if (existingAttempt) {
-      throw new BadRequestException('Quiz has already been attempted');
+    // Check if already attempted the maximum number of times (only if maxAttempts is set)
+    if (assignment.quiz.maxAttempts && assignment.attempts >= assignment.quiz.maxAttempts) {
+      throw new BadRequestException(
+        `You have reached the maximum number of attempts (${assignment.quiz.maxAttempts}) for this quiz`,
+      );
     }
 
     // Check due date
@@ -411,11 +732,18 @@ export class QuizzesService {
       maxScore: assignment.quiz.totalMarks,
     });
 
-    // Update assignment status
+    // Update assignment status and increment attempts
     assignment.status = AssignmentStatus.IN_PROGRESS;
+    assignment.attempts += 1;
     await this.quizAssignmentRepository.save(assignment);
 
-    return this.quizAttemptRepository.save(attempt) as any;
+    const savedAttempt = await this.quizAttemptRepository.save(attempt);
+
+    // Return the attempt with full quiz assignment and quiz data
+    return this.quizAttemptRepository.findOne({
+      where: { id: savedAttempt.id },
+      relations: ['quizAssignment', 'quizAssignment.quiz', 'quizAssignment.quiz.questions', 'quizAssignment.student', 'quizAssignment.student.user'],
+    }) as any;
   }
 
   async submitQuiz(
@@ -427,7 +755,7 @@ export class QuizzesService {
 
     const attempt = await this.quizAttemptRepository.findOne({
       where: { id: attemptId },
-      relations: ['assignment', 'assignment.quiz', 'assignment.quiz.questions'],
+      relations: ['quizAssignment', 'quizAssignment.quiz', 'quizAssignment.quiz.questions'],
     });
 
     if (!attempt) {
@@ -439,7 +767,7 @@ export class QuizzesService {
     }
 
     const { answers } = submitQuizDto;
-    const quiz = attempt.assignment.quiz;
+    const quiz = attempt.quizAssignment.quiz;
 
     // Calculate score
     let score = 0;
@@ -477,8 +805,8 @@ export class QuizzesService {
     attempt.timeTaken = timeTaken;
 
     // Update assignment status
-    attempt.assignment.status = AssignmentStatus.COMPLETED;
-    await this.quizAssignmentRepository.save(attempt.assignment);
+    attempt.quizAssignment.status = AssignmentStatus.COMPLETED;
+    await this.quizAssignmentRepository.save(attempt.quizAssignment);
 
     return this.quizAttemptRepository.save(attempt) as any;
   }
@@ -495,10 +823,10 @@ export class QuizzesService {
     const attempt = await this.quizAttemptRepository.findOne({
       where: { id: attemptId },
       relations: [
-        'assignment',
-        'assignment.quiz',
-        'assignment.quiz.questions',
-        'assignment.quiz.teacher',
+        'quizAssignment',
+        'quizAssignment.quiz',
+        'quizAssignment.quiz.questions',
+        'quizAssignment.quiz.teacher',
       ],
     });
 
@@ -507,7 +835,7 @@ export class QuizzesService {
     }
 
     const teacher = await this.teachersService.findByUserId(user.id);
-    if (attempt.assignment.quiz.teacherId !== teacher.id) {
+    if (attempt.quizAssignment.quiz.teacherId !== teacher.id) {
       throw new ForbiddenException('You can only grade your own quizzes');
     }
 
@@ -527,8 +855,8 @@ export class QuizzesService {
     attempt.score = (attempt.score || 0) + additionalScore;
 
     // Update assignment status
-    attempt.assignment.status = AssignmentStatus.COMPLETED;
-    await this.quizAssignmentRepository.save(attempt.assignment);
+    attempt.quizAssignment.status = AssignmentStatus.COMPLETED;
+    await this.quizAssignmentRepository.save(attempt.quizAssignment);
 
     return this.quizAttemptRepository.save(attempt) as any;
   }
@@ -551,18 +879,20 @@ export class QuizzesService {
 
     const assignments = await this.quizAssignmentRepository.find({
       where: { quizId },
-      relations: ['student', 'student.user', 'attempts'],
+      relations: ['student', 'student.user'],
       order: { assignedAt: 'DESC' },
     });
 
-    return assignments.map((assignment) => ({
-      studentId: assignment.studentId,
-      studentName: `${assignment.student.user.firstName} ${assignment.student.user.lastName}`,
-      assignedAt: assignment.assignedAt,
-      dueDate: assignment.dueDate,
-      status: assignment.status,
-      attempt: assignment.attempts[0] || null,
-    }));
+    return assignments
+      .filter(assignment => assignment.student && assignment.student.user) // Filter out assignments with missing student data
+      .map((assignment) => ({
+        studentId: assignment.studentId,
+        studentName: `${assignment.student.user.firstName} ${assignment.student.user.lastName}`,
+        assignedAt: assignment.assignedAt,
+        dueDate: assignment.dueDate,
+        status: assignment.status,
+        attemptCount: assignment.attempts,
+      }));
   }
 
   async delete(id: number, user: User): Promise<void> {
@@ -589,8 +919,23 @@ export class QuizzesService {
       );
     }
 
-    quiz.isActive = false;
-    await this.quizRepository.save(quiz);
+    // Check if any students have attempted this quiz
+    const attemptCount = await this.quizAttemptRepository.count({
+      where: { 
+        quizAssignment: { quizId: id }
+      }
+    });
+
+    if (attemptCount > 0) {
+      // If students have attempted the quiz, just mark as inactive to preserve data
+      quiz.isActive = false;
+      await this.quizRepository.save(quiz);
+    } else {
+      // If no attempts made, we can safely remove assignments and mark quiz inactive
+      await this.quizAssignmentRepository.delete({ quizId: id });
+      quiz.isActive = false;
+      await this.quizRepository.save(quiz);
+    }
   }
 
   async publishQuiz(id: number, user: User): Promise<Quiz> {

@@ -8,6 +8,7 @@ import { QuizAssignment } from './entities/quiz-assignment.entity';
 import { QuizAttempt } from './entities/quiz-attempt.entity';
 import { TeachersModule } from '../teachers/teachers.module';
 import { StudentsModule } from '../students/students.module';
+import { DatabaseHealthService } from '../common/database-health.service';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { StudentsModule } from '../students/students.module';
     StudentsModule,
   ],
   controllers: [QuizzesController],
-  providers: [QuizzesService],
+  providers: [QuizzesService, DatabaseHealthService],
   exports: [QuizzesService],
 })
 export class QuizzesModule {}

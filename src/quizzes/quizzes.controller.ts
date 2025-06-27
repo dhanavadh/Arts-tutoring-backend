@@ -31,15 +31,65 @@ export class QuizzesController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
-  create(@Body() createQuizDto: CreateQuizDto, @CurrentUser() user: User) {
-    return this.quizzesService.create(createQuizDto, user);
+  async create(@Body() createQuizDto: CreateQuizDto, @CurrentUser() user: User) {
+    console.log('Creating quiz with data:', {
+      title: createQuizDto.title,
+      description: createQuizDto.description,
+      questionCount: createQuizDto.questions?.length || 0,
+      questions: createQuizDto.questions?.map(q => ({
+        type: q.questionType,
+        text: q.question.substring(0, 50),
+        marks: q.marks,
+      })),
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      },
+    });
+
+    const quiz = await this.quizzesService.create(createQuizDto, user);
+
+    console.log('Quiz created:', {
+      id: quiz.id,
+      title: quiz.title,
+      status: quiz.status,
+      questionCount: quiz.questions?.length || 0,
+      totalMarks: quiz.questions?.reduce((sum, q) => sum + (q.marks || 0), 0) || 0,
+    });
+
+    return quiz;
   }
 
   @Get()
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.quizzesService.findAll(paginationDto.page, paginationDto.limit);
+  async findAll(@Query() paginationDto: PaginationDto) {
+    try {
+      console.log(
+        'GET /quizzes - Finding all quizzes with pagination:',
+        JSON.stringify(paginationDto, null, 2),
+      );
+
+      const result = await this.quizzesService.findAll(
+        paginationDto.page,
+        paginationDto.limit,
+      );
+
+      const summary = {
+        total: result.total,
+        pageCount: result.totalPages,
+        currentPage: result.page,
+        quizzesInPage: result.data.length,
+        status: 'success',
+      };
+
+      console.log('Quizzes found:', JSON.stringify(summary, null, 2));
+      return result;
+    } catch (error) {
+      console.error('Error finding quizzes:', error);
+      throw error;
+    }
   }
 
   @Get('my-quizzes')
@@ -103,6 +153,17 @@ export class QuizzesController {
     @CurrentUser() user: User,
   ) {
     return this.quizzesService.removeQuizAssignment(id, studentId, user);
+  }
+
+  // Temporary endpoint for testing - reset assignment attempts
+  @Patch('assignments/:assignmentId/reset-attempts')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  resetAttempts(
+    @Param('assignmentId', ParseIntPipe) assignmentId: number,
+    @CurrentUser() user: User,
+  ) {
+    return this.quizzesService.resetQuizAttempts(assignmentId, user);
   }
 
   @Post('assignments/:assignmentId/attempt')

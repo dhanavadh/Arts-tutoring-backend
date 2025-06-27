@@ -8,20 +8,16 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Quiz } from './quiz.entity';
-
-export enum QuestionType {
-  MULTIPLE_CHOICE = 'multiple_choice',
-  TRUE_FALSE = 'true_false',
-  SHORT_ANSWER = 'short_answer',
-  ESSAY = 'essay',
-}
+import { QuestionType } from './question-type.enum';
 
 @Entity('quiz_questions')
 export class QuizQuestion {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Quiz, (quiz) => quiz.questions)
+  @ManyToOne(() => Quiz, (quiz) => quiz.questions, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'quiz_id' })
   quiz: Quiz;
 

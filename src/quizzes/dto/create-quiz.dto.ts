@@ -48,9 +48,13 @@ export class CreateQuizDto {
   @IsString()
   description?: string;
 
-  @IsOptional()
-  @IsString()
-  subject?: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateQuestionDto)
+  questions: CreateQuestionDto[];
+
+  @IsEnum(['draft', 'published', 'archived'])
+  status: 'draft' | 'published' | 'archived' = 'draft';
 
   @IsOptional()
   @IsNumber()
@@ -58,11 +62,7 @@ export class CreateQuizDto {
   timeLimit?: number;
 
   @IsOptional()
-  @IsEnum(['draft', 'published', 'archived'])
-  status?: 'draft' | 'published' | 'archived';
-
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateQuestionDto)
-  questions: CreateQuestionDto[];
+  @IsNumber()
+  @IsPositive()
+  maxAttempts?: number = 1;
 }

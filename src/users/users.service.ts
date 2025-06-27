@@ -5,12 +5,14 @@ import { Repository } from 'typeorm';
 import { User, UserRole } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { DatabaseHealthService } from '../common/database-health.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    private databaseHealthService: DatabaseHealthService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -55,9 +57,11 @@ export class UsersService {
   }
 
   async findById(id: number): Promise<User> {
-    const user = await this.userRepository.findOne({
-      where: { id },
-      relations: ['teacher', 'student'],
+    const user = await this.databaseHealthService.executeWithRetry(async () => {
+      return this.userRepository.findOne({
+        where: { id },
+        relations: ['teacher', 'student'],
+      });
     });
 
     if (!user) {
@@ -68,9 +72,11 @@ export class UsersService {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.userRepository.findOne({
-      where: { email },
-      relations: ['teacher', 'student'],
+    return this.databaseHealthService.executeWithRetry(async () => {
+      return this.userRepository.findOne({
+        where: { email },
+        relations: ['teacher', 'student'],
+      });
     });
   }
 

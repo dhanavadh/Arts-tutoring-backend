@@ -2,6 +2,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { databaseConfig } from './config/database.config';
+import { DatabaseHealthService } from './common/database-health.service';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { TeachersModule } from './teachers/teachers.module';
@@ -20,17 +22,11 @@ import { OtpModule } from './otp/otp.module';
       isGlobal: true,
     }),
     TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '3306'),
-      username: process.env.DB_USERNAME || 'root',
-      password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'student_teacher_system',
+      ...databaseConfig,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       migrations: [__dirname + '/migrations/*{.ts,.js}'],
       synchronize: false, // Disabled to prevent automatic schema changes
       migrationsRun: true, // Run migrations automatically on startup
-      logging: process.env.NODE_ENV === 'development',
     }),
     AuthModule,
     UsersModule,
@@ -44,5 +40,7 @@ import { OtpModule } from './otp/otp.module';
     EmailModule,
     OtpModule,
   ],
+  providers: [DatabaseHealthService],
+  exports: [DatabaseHealthService],
 })
 export class AppModule {}

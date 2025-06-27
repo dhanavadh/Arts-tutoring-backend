@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { QuizQuestion } from './quiz-question.entity';
 import { Teacher } from '../../teachers/entities/teacher.entity';
+import { QuizAssignment } from './quiz-assignment.entity';
 
 @Entity('quizzes')
 export class Quiz {
@@ -31,11 +32,7 @@ export class Quiz {
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
-  @Column({ 
-    type: 'enum', 
-    enum: ['draft', 'published', 'archived'], 
-    default: 'draft' 
-  })
+  @Column({type: 'enum', enum: ['draft', 'published', 'archived'], default: 'draft'})
   status: 'draft' | 'published' | 'archived';
 
   @Column({ name: 'teacher_id', type: 'int', nullable: true })
@@ -48,7 +45,16 @@ export class Quiz {
   @Column({ name: 'total_marks', default: 0 })
   totalMarks: number;
 
-  @OneToMany(() => QuizQuestion, (question) => question.quiz)
+  @OneToMany(() => QuizAssignment, (assignment) => assignment.quiz, {
+    eager: true,
+    cascade: true
+  })
+  assignments: QuizAssignment[];
+
+  @OneToMany(() => QuizQuestion, (question) => question.quiz, {
+    eager: true,
+    cascade: true
+  })
   questions: QuizQuestion[];
 
   @CreateDateColumn({ name: 'created_at' })

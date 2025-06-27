@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -20,7 +21,8 @@ export class QuizAttempt {
   id: number;
 
   @ManyToOne(() => QuizAssignment)
-  assignment: QuizAssignment;
+  @JoinColumn({ name: 'assignment_id' })
+  quizAssignment: QuizAssignment;
 
   @Column({ name: 'assignment_id' })
   assignmentId: number;

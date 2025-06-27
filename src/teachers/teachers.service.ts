@@ -4,12 +4,14 @@ import { Repository } from 'typeorm';
 import { Teacher } from './entities/teacher.entity';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
+import { DatabaseHealthService } from '../common/database-health.service';
 
 @Injectable()
 export class TeachersService {
   constructor(
     @InjectRepository(Teacher)
     private teacherRepository: Repository<Teacher>,
+    private databaseHealthService: DatabaseHealthService,
   ) {}
 
   async create(createTeacherDto: CreateTeacherDto): Promise<Teacher> {
@@ -34,9 +36,11 @@ export class TeachersService {
   }
 
   async findById(id: number): Promise<Teacher> {
-    const teacher = await this.teacherRepository.findOne({
-      where: { id },
-      relations: ['user'],
+    const teacher = await this.databaseHealthService.executeWithRetry(async () => {
+      return this.teacherRepository.findOne({
+        where: { id },
+        relations: ['user'],
+      });
     });
 
     if (!teacher) {
@@ -47,9 +51,11 @@ export class TeachersService {
   }
 
   async findByUserId(userId: number): Promise<Teacher> {
-    const teacher = await this.teacherRepository.findOne({
-      where: { userId },
-      relations: ['user'],
+    const teacher = await this.databaseHealthService.executeWithRetry(async () => {
+      return this.teacherRepository.findOne({
+        where: { userId },
+        relations: ['user'],
+      });
     });
 
     if (!teacher) {

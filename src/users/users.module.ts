@@ -4,11 +4,12 @@ import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { User } from './entities/user.entity';
 import { UploadsModule } from '../uploads/uploads.module';
+import { DatabaseHealthService } from '../common/database-health.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User]), UploadsModule],
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [UsersService, DatabaseHealthService],
   exports: [UsersService],
 })
 export class UsersModule {}
