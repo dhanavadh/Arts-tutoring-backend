@@ -24,7 +24,7 @@ export class Teacher {
   @Column({ name: 'user_id' })
   userId: number;
 
-  @Column()
+  @Column({ type: 'text' })
   subject: string;
 
   @Column({ name: 'hourly_rate', type: 'decimal', precision: 10, scale: 2 })

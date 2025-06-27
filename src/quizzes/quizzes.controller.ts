@@ -106,6 +106,20 @@ export class QuizzesController {
     return this.quizzesService.getAssignedQuizzes(user.id);
   }
 
+  @Get('my-attempts')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.STUDENT)
+  getMyAttempts(@CurrentUser() user: User) {
+    return this.quizzesService.getStudentAttempts(user.id);
+  }
+
+  @Get('debug/my-attempts')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.STUDENT)
+  async debugMyAttempts(@CurrentUser() user: User) {
+    return this.quizzesService.debugGetStudentAttempts(user.id);
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.quizzesService.findOne(id);
@@ -174,6 +188,26 @@ export class QuizzesController {
     @CurrentUser() user: User,
   ) {
     return this.quizzesService.startQuizAttempt(assignmentId, user);
+  }
+
+  @Get('attempts/:attemptId/details')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.STUDENT)
+  getAttemptDetails(
+    @Param('attemptId', ParseIntPipe) attemptId: number,
+    @CurrentUser() user: User,
+  ) {
+    return this.quizzesService.getAttemptDetails(attemptId, user);
+  }
+
+  @Get('assignments/:assignmentId/result')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.STUDENT)
+  getAssignmentResult(
+    @Param('assignmentId', ParseIntPipe) assignmentId: number,
+    @CurrentUser() user: User,
+  ) {
+    return this.quizzesService.getAssignmentResult(assignmentId, user);
   }
 
   @Post('attempts/:attemptId/submit')

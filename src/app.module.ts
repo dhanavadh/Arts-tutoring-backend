@@ -15,6 +15,7 @@ import { UploadsModule } from './uploads/uploads.module';
 import { AdminModule } from './admin/admin.module';
 import { EmailModule } from './email/email.module';
 import { OtpModule } from './otp/otp.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { OtpModule } from './otp/otp.module';
       ...databaseConfig,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       migrations: [__dirname + '/migrations/*{.ts,.js}'],
-      synchronize: false, // Disabled to prevent automatic schema changes
+      synchronize: true, // Disabled to prevent automatic schema changes
       migrationsRun: true, // Run migrations automatically on startup
     }),
     AuthModule,
@@ -39,6 +40,7 @@ import { OtpModule } from './otp/otp.module';
     AdminModule,
     EmailModule,
     OtpModule,
+    HealthModule,
   ],
   providers: [DatabaseHealthService],
   exports: [DatabaseHealthService],

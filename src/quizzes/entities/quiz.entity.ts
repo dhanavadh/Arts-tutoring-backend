@@ -26,8 +26,8 @@ export class Quiz {
   @Column({ name: 'time_limit', nullable: true })
   timeLimit: number;
 
-  @Column({ name: 'max_attempts', default: 1 })
-  maxAttempts: number;
+  @Column({ name: 'max_attempts', type: 'int', nullable: true, default: null })
+  maxAttempts: number | null;
 
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
@@ -47,13 +47,15 @@ export class Quiz {
 
   @OneToMany(() => QuizAssignment, (assignment) => assignment.quiz, {
     eager: true,
-    cascade: true
+    cascade: true,
+    onDelete: 'CASCADE',
   })
   assignments: QuizAssignment[];
 
   @OneToMany(() => QuizQuestion, (question) => question.quiz, {
     eager: true,
-    cascade: true
+    cascade: true,
+    onDelete: 'CASCADE',
   })
   questions: QuizQuestion[];
 

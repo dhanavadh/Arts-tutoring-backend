@@ -64,5 +64,5 @@ export class CreateQuizDto {
   @IsOptional()
   @IsNumber()
   @IsPositive()
-  maxAttempts?: number = 1;
+  maxAttempts?: number | null;
 }
