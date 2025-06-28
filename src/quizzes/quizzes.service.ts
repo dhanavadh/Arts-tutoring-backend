@@ -866,9 +866,9 @@ export class QuizzesService {
         questionType: question.questionType,
         studentAnswer,
         correctAnswer: question.correctAnswer,
-        marks: question.marks
+        marks: question.marks,
       });
-      
+
       gradedAnswers[question.id] = {
         studentAnswer,
         correctAnswer: question.correctAnswer,
@@ -879,16 +879,22 @@ export class QuizzesService {
         question.questionType === QuestionType.MULTIPLE_CHOICE ||
         question.questionType === QuestionType.TRUE_FALSE
       ) {
-        console.log(`Auto-grading question ${question.id} (${question.questionType})`);
+        console.log(
+          `Auto-grading question ${question.id} (${question.questionType})`,
+        );
         if (studentAnswer === question.correctAnswer) {
           gradedAnswers[question.id].marks = question.marks;
           score += question.marks;
           console.log(`✓ Correct! Awarded ${question.marks} points`);
         } else {
-          console.log(`✗ Incorrect. Student: ${studentAnswer}, Correct: ${question.correctAnswer}`);
+          console.log(
+            `✗ Incorrect. Student: ${studentAnswer}, Correct: ${question.correctAnswer}`,
+          );
         }
       } else {
-        console.log(`Manual grading required for question ${question.id} (${question.questionType})`);
+        console.log(
+          `Manual grading required for question ${question.id} (${question.questionType})`,
+        );
       }
       // For essay and short_answer questions, manual grading is required
     });
@@ -909,10 +915,12 @@ export class QuizzesService {
     attempt.answers = gradedAnswers;
     attempt.score = score;
     attempt.timeTaken = timeTaken;
-    
+
     // Check if all questions can be automatically graded
-    const hasEssayQuestions = quiz.questions.some(q => q.questionType === QuestionType.ESSAY);
-    
+    const hasEssayQuestions = quiz.questions.some(
+      (q) => q.questionType === QuestionType.ESSAY,
+    );
+
     // If no essay questions, mark as graded. Otherwise, leave as submitted for manual grading
     if (!hasEssayQuestions) {
       attempt.status = AttemptStatus.GRADED;
@@ -979,7 +987,9 @@ export class QuizzesService {
 
   async getQuizResults(quizId: number, user: User) {
     if (user.role !== UserRole.TEACHER && user.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only teachers and admins can view quiz results');
+      throw new ForbiddenException(
+        'Only teachers and admins can view quiz results',
+      );
     }
 
     let quiz;
@@ -987,13 +997,13 @@ export class QuizzesService {
       const teacher = await this.teachersService.findByUserId(user.id);
       quiz = await this.quizRepository.findOne({
         where: { id: quizId, teacherId: teacher.id },
-        relations: ['questions']
+        relations: ['questions'],
       });
     } else {
       // Admin can view any quiz
       quiz = await this.quizRepository.findOne({
         where: { id: quizId },
-        relations: ['questions']
+        relations: ['questions'],
       });
     }
 
@@ -1017,11 +1027,11 @@ export class QuizzesService {
 
       // Get the latest attempt for this assignment
       const attempt = await this.quizAttemptRepository.findOne({
-        where: { 
+        where: {
           assignmentId: assignment.id,
-          status: In(['submitted', 'graded'])
+          status: In(['submitted', 'graded']),
         },
-        order: { submittedAt: 'DESC' }
+        order: { submittedAt: 'DESC' },
       });
 
       const result = {
@@ -1035,11 +1045,15 @@ export class QuizzesService {
         attemptCount: assignment.attempts,
         startedAt: attempt?.startedAt,
         submittedAt: attempt?.submittedAt,
-        score: attempt?.score ? parseFloat(attempt.score.toString()) : undefined,
-        maxScore: attempt?.maxScore ? parseFloat(attempt.maxScore.toString()) : quiz.totalMarks,
+        score: attempt?.score
+          ? parseFloat(attempt.score.toString())
+          : undefined,
+        maxScore: attempt?.maxScore
+          ? parseFloat(attempt.maxScore.toString())
+          : quiz.totalMarks,
         timeTaken: attempt?.timeTaken,
         answers: attempt?.answers || {},
-        graded: attempt?.status === 'graded'
+        graded: attempt?.status === 'graded',
       };
 
       results.push(result);
@@ -1048,11 +1062,13 @@ export class QuizzesService {
     console.log('Quiz results for teacher/admin:', {
       quizId,
       resultsCount: results.length,
-      firstResult: results[0] ? {
-        studentName: results[0].studentName,
-        hasAnswers: Object.keys(results[0].answers).length > 0,
-        score: results[0].score
-      } : null
+      firstResult: results[0]
+        ? {
+            studentName: results[0].studentName,
+            hasAnswers: Object.keys(results[0].answers).length > 0,
+            score: results[0].score,
+          }
+        : null,
     });
 
     return results;
@@ -1181,15 +1197,20 @@ export class QuizzesService {
       .leftJoinAndSelect('quiz.teacher', 'teacher')
       .leftJoinAndSelect('teacher.user', 'teacherUser')
       .where('attempt.studentId = :studentId', { studentId: student.id })
-      .andWhere('attempt.status IN (:...statuses)', { statuses: ['submitted', 'graded'] })
+      .andWhere('attempt.status IN (:...statuses)', {
+        statuses: ['submitted', 'graded'],
+      })
       .orderBy('attempt.submittedAt', 'DESC')
       .getMany();
 
-    return attempts.map(attempt => ({
+    return attempts.map((attempt) => ({
       id: attempt.id,
       score: attempt.score,
       maxScore: attempt.maxScore,
-      percentage: attempt.maxScore > 0 ? Math.round((attempt.score / attempt.maxScore) * 100) : 0,
+      percentage:
+        attempt.maxScore > 0
+          ? Math.round((attempt.score / attempt.maxScore) * 100)
+          : 0,
       submittedAt: attempt.submittedAt,
       timeTaken: attempt.timeTaken,
       status: attempt.status,
@@ -1200,7 +1221,10 @@ export class QuizzesService {
         totalMarks: attempt.quizAssignment.quiz.totalMarks,
         questionCount: attempt.quizAssignment.quiz.questions?.length || 0,
         teacher: {
-          name: attempt.quizAssignment.quiz.teacher?.user?.firstName + ' ' + attempt.quizAssignment.quiz.teacher?.user?.lastName,
+          name:
+            attempt.quizAssignment.quiz.teacher?.user?.firstName +
+            ' ' +
+            attempt.quizAssignment.quiz.teacher?.user?.lastName,
           email: attempt.quizAssignment.quiz.teacher?.user?.email,
         },
       },
@@ -1229,21 +1253,23 @@ export class QuizzesService {
       .getMany();
 
     console.log('Debug: Found attempts:', allAttempts.length);
-    allAttempts.forEach(attempt => {
-      console.log(`Attempt ${attempt.id}: status=${attempt.status}, submitted=${attempt.submittedAt}, score=${attempt.score}`);
+    allAttempts.forEach((attempt) => {
+      console.log(
+        `Attempt ${attempt.id}: status=${attempt.status}, submitted=${attempt.submittedAt}, score=${attempt.score}`,
+      );
     });
 
     return {
       studentId: student.id,
       totalAttempts: allAttempts.length,
-      attempts: allAttempts.map(attempt => ({
+      attempts: allAttempts.map((attempt) => ({
         id: attempt.id,
         status: attempt.status,
         submittedAt: attempt.submittedAt,
         score: attempt.score,
         maxScore: attempt.maxScore,
-        quizTitle: attempt.quizAssignment?.quiz?.title || 'Unknown Quiz'
-      }))
+        quizTitle: attempt.quizAssignment?.quiz?.title || 'Unknown Quiz',
+      })),
     };
   }
 
@@ -1262,7 +1288,9 @@ export class QuizzesService {
       .leftJoinAndSelect('teacher.user', 'teacherUser')
       .where('attempt.id = :attemptId', { attemptId })
       .andWhere('attempt.studentId = :studentId', { studentId: student.id })
-      .andWhere('attempt.status IN (:...statuses)', { statuses: ['submitted', 'graded'] })
+      .andWhere('attempt.status IN (:...statuses)', {
+        statuses: ['submitted', 'graded'],
+      })
       .getOne();
 
     if (!attempt) {
@@ -1276,7 +1304,10 @@ export class QuizzesService {
       id: attempt.id,
       score: attempt.score,
       maxScore: attempt.maxScore,
-      percentage: attempt.maxScore > 0 ? Math.round((attempt.score / attempt.maxScore) * 100) : 0,
+      percentage:
+        attempt.maxScore > 0
+          ? Math.round((attempt.score / attempt.maxScore) * 100)
+          : 0,
       submittedAt: attempt.submittedAt,
       timeTaken: attempt.timeTaken,
       status: attempt.status,
@@ -1287,14 +1318,17 @@ export class QuizzesService {
         totalMarks: attempt.quizAssignment.quiz.totalMarks,
         timeLimit: attempt.quizAssignment.quiz.timeLimit,
         teacher: {
-          name: attempt.quizAssignment.quiz.teacher?.user?.firstName + ' ' + attempt.quizAssignment.quiz.teacher?.user?.lastName,
+          name:
+            attempt.quizAssignment.quiz.teacher?.user?.firstName +
+            ' ' +
+            attempt.quizAssignment.quiz.teacher?.user?.lastName,
           email: attempt.quizAssignment.quiz.teacher?.user?.email,
         },
       },
-      questions: questions.map(question => {
+      questions: questions.map((question) => {
         const studentAnswer = answers[question.id];
         const isCorrect = this.checkAnswer(question, studentAnswer);
-        
+
         return {
           id: question.id,
           question: question.question,
@@ -1344,12 +1378,16 @@ export class QuizzesService {
       .leftJoinAndSelect('teacher.user', 'teacherUser')
       .where('attempt.assignmentId = :assignmentId', { assignmentId })
       .andWhere('attempt.studentId = :studentId', { studentId: student.id })
-      .andWhere('attempt.status IN (:...statuses)', { statuses: ['submitted', 'graded'] })
+      .andWhere('attempt.status IN (:...statuses)', {
+        statuses: ['submitted', 'graded'],
+      })
       .orderBy('attempt.submittedAt', 'DESC')
       .getOne();
 
     if (!attempt) {
-      throw new NotFoundException('No completed quiz attempts found for this assignment');
+      throw new NotFoundException(
+        'No completed quiz attempts found for this assignment',
+      );
     }
 
     const answers = attempt.answers || {};
@@ -1361,19 +1399,30 @@ export class QuizzesService {
     console.log('- Found attempt:', attempt.id);
     console.log('- Attempt answers:', JSON.stringify(answers, null, 2));
     console.log('- Questions count:', questions.length);
-    console.log('- First question:', questions[0] ? {
-      id: questions[0].id,
-      question: questions[0].question.substring(0, 50),
-      questionType: questions[0].questionType,
-      correctAnswer: questions[0].correctAnswer,
-      explanation: questions[0].correctAnswerExplanation?.substring(0, 50)
-    } : 'No questions');
+    console.log(
+      '- First question:',
+      questions[0]
+        ? {
+            id: questions[0].id,
+            question: questions[0].question.substring(0, 50),
+            questionType: questions[0].questionType,
+            correctAnswer: questions[0].correctAnswer,
+            explanation: questions[0].correctAnswerExplanation?.substring(
+              0,
+              50,
+            ),
+          }
+        : 'No questions',
+    );
 
     return {
       id: attempt.id,
       score: attempt.score,
       maxScore: attempt.maxScore,
-      percentage: attempt.maxScore > 0 ? Math.round((attempt.score / attempt.maxScore) * 100) : 0,
+      percentage:
+        attempt.maxScore > 0
+          ? Math.round((attempt.score / attempt.maxScore) * 100)
+          : 0,
       submittedAt: attempt.submittedAt,
       timeTaken: attempt.timeTaken,
       status: attempt.status,
@@ -1384,23 +1433,26 @@ export class QuizzesService {
         totalMarks: attempt.quizAssignment.quiz.totalMarks,
         timeLimit: attempt.quizAssignment.quiz.timeLimit,
         teacher: {
-          name: attempt.quizAssignment.quiz.teacher?.user?.firstName + ' ' + attempt.quizAssignment.quiz.teacher?.user?.lastName,
+          name:
+            attempt.quizAssignment.quiz.teacher?.user?.firstName +
+            ' ' +
+            attempt.quizAssignment.quiz.teacher?.user?.lastName,
           email: attempt.quizAssignment.quiz.teacher?.user?.email,
         },
       },
-      questions: questions.map(question => {
+      questions: questions.map((question) => {
         const answerData = answers[question.id];
         const studentAnswer = answerData?.studentAnswer || answerData;
         const isCorrect = this.checkAnswer(question, studentAnswer);
-        
+
         console.log(`Question ${question.id} processing:`, {
           answerData,
           studentAnswer,
           correctAnswer: question.correctAnswer,
           correctAnswerExplanation: question.correctAnswerExplanation,
-          isCorrect
+          isCorrect,
         });
-        
+
         return {
           id: question.id,
           question: question.question,
@@ -1431,8 +1483,14 @@ export class QuizzesService {
       case QuestionType.TRUE_FALSE:
         return studentAnswer === question.correctAnswer;
       case QuestionType.SHORT_ANSWER:
-        if (typeof studentAnswer === 'string' && typeof question.correctAnswer === 'string') {
-          return studentAnswer.toLowerCase().trim() === question.correctAnswer.toLowerCase().trim();
+        if (
+          typeof studentAnswer === 'string' &&
+          typeof question.correctAnswer === 'string'
+        ) {
+          return (
+            studentAnswer.toLowerCase().trim() ===
+            question.correctAnswer.toLowerCase().trim()
+          );
         }
         return studentAnswer === question.correctAnswer;
       case QuestionType.ESSAY:

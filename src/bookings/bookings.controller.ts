@@ -13,6 +13,8 @@ import {
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
+import { CreateAvailabilityDto } from './dto/create-availability.dto';
+import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -109,5 +111,79 @@ export class BookingsController {
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: User) {
     return this.bookingsService.delete(id, user);
+  }
+
+  // Availability endpoints
+  @Post('availability')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  createAvailability(
+    @Body() createAvailabilityDto: CreateAvailabilityDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.bookingsService.createAvailability(createAvailabilityDto, user);
+  }
+
+  @Get('availability/teacher/:teacherId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  getTeacherAvailability(@Param('teacherId', ParseIntPipe) teacherId: number) {
+    return this.bookingsService.getTeacherAvailability(teacherId);
+  }
+
+  @Get('availability/teacher/:teacherId/published')
+  getPublishedAvailability(@Param('teacherId', ParseIntPipe) teacherId: number) {
+    // Remove guards and roles so anyone can view published availability
+    return this.bookingsService.getPublishedAvailability(teacherId);
+  }
+
+  @Get('teacher/:teacherId/slots')
+  getAvailableTimeSlots(
+    @Param('teacherId', ParseIntPipe) teacherId: number,
+    @Query('date') date: string,
+  ) {
+    // Remove guards and roles so anyone can view available slots
+    return this.bookingsService.getAvailableTimeSlots(teacherId, date);
+  }
+
+  @Patch('availability/:id')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  updateAvailability(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateAvailabilityDto: UpdateAvailabilityDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.bookingsService.updateAvailability(id, updateAvailabilityDto, user);
+  }
+
+  @Patch('availability/:id/publish')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  publishAvailability(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: User,
+  ) {
+    return this.bookingsService.publishAvailability(id, user);
+  }
+
+  @Patch('availability/:id/unpublish')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  unpublishAvailability(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: User,
+  ) {
+    return this.bookingsService.unpublishAvailability(id, user);
+  }
+
+  @Delete('availability/:id')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  async deleteAvailability(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: User,
+  ) {
+    return this.bookingsService.deleteAvailability(id, user);
   }
 }

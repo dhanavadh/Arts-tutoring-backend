@@ -13,14 +13,16 @@ import { JwtModule } from '@nestjs/jwt';
 @Module({
   imports: [
     PassportModule,
-    UsersModule, 
-    TeachersModule, 
+    UsersModule,
+    TeachersModule,
     StudentsModule,
     OtpModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'your-super-secure-secret-key',
+        secret:
+          configService.get<string>('JWT_SECRET') ||
+          'your-super-secure-secret-key',
         signOptions: {
           expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '7d',
         },

@@ -13,7 +13,7 @@ export class EmailService {
 
   private createTransporter() {
     const smtpPort = this.configService.get<number>('SMTP_PORT', 587);
-    
+
     this.transporter = nodemailer.createTransport({
       host: this.configService.get<string>('SMTP_HOST', 'smtp.gmail.com'),
       port: smtpPort,
@@ -39,7 +39,11 @@ export class EmailService {
     }
   }
 
-  async sendOtpEmail(email: string, otp: string, firstName: string): Promise<boolean> {
+  async sendOtpEmail(
+    email: string,
+    otp: string,
+    firstName: string,
+  ): Promise<boolean> {
     try {
       const mailOptions = {
         from: `"Arts Tutoring" <${this.configService.get<string>('SMTP_FROM', 'contact@dhanav.me')}>`,
@@ -47,12 +51,15 @@ export class EmailService {
         subject: '[Arts Tutoring] Email Verification Code',
         html: this.getOtpEmailTemplate(otp, firstName),
         text: `Hello ${firstName},\n\nYour verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nBest regards,\nArts Tutoring Team`,
-        replyTo: this.configService.get<string>('SMTP_FROM', 'contact@dhanav.me'),
+        replyTo: this.configService.get<string>(
+          'SMTP_FROM',
+          'contact@dhanav.me',
+        ),
         headers: {
           'X-Priority': '1',
           'X-MSMail-Priority': 'High',
-          'Importance': 'high'
-        }
+          Importance: 'high',
+        },
       };
 
       const result = await this.transporter.sendMail(mailOptions);
@@ -62,7 +69,7 @@ export class EmailService {
       return true;
     } catch (error) {
       this.logger.error(`Failed to send OTP email to ${email}`, error);
-      
+
       // For development/testing: Log OTP to console when email fails
       if (this.configService.get<string>('NODE_ENV') === 'development') {
         this.logger.warn(`📧 EMAIL FAILED - OTP for ${email}: ${otp}`);
@@ -70,7 +77,7 @@ export class EmailService {
         this.logger.warn(`⏰ This OTP will expire in 10 minutes`);
         return true; // Return true so registration can continue
       }
-      
+
       return false;
     }
   }

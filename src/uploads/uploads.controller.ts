@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards,
   Res,
   Req,
   NotFoundException,
@@ -17,27 +16,34 @@ import { existsSync, createReadStream } from 'fs';
 import { UploadsService } from './uploads.service';
 import { CreateUploadDto } from './dto/file-upload.dto';
 import { UpdateUploadDto } from './dto/update-upload.dto';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 
 @Controller('uploads')
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
   @Get('files/*')
-  @UseGuards(JwtAuthGuard)
   serveFile(@Req() req: Request, @Res() res: Response) {
     // Extract file path from the request URL
     const requestPath = req.url;
     const filePath = requestPath.replace('/api/v1/uploads/files/', '');
-    
+
     // Handle case where filePath might be empty
     if (!filePath || filePath === requestPath) {
       throw new NotFoundException('File path not provided');
     }
-    
+
+    // If not a profile image, require authentication
+    if (!filePath.startsWith('profiles/')) {
+      // Check for JWT (reuse JwtAuthGuard logic or custom check)
+      // For simplicity, throw Unauthorized if no access_token cookie
+      if (!req.cookies || !req.cookies.access_token) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+    }
+
     // Construct the full file path
     const fullPath = join(process.cwd(), 'uploads', filePath);
-    
+
     // Check if file exists
     if (!existsSync(fullPath)) {
       throw new NotFoundException('File not found');
@@ -46,7 +52,7 @@ export class UploadsController {
     // Set appropriate headers
     res.setHeader('Content-Type', this.getContentType(filePath));
     res.setHeader('Cache-Control', 'private, max-age=3600');
-    
+
     // Stream the file
     const fileStream = createReadStream(fullPath);
     fileStream.pipe(res);

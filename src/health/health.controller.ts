@@ -13,7 +13,8 @@ export class HealthController {
   @Get()
   async getBasicHealth() {
     try {
-      const isHealthy = await this.databaseHealthService.checkDatabaseConnection();
+      const isHealthy =
+        await this.databaseHealthService.checkDatabaseConnection();
       return {
         status: isHealthy ? 'healthy' : 'unhealthy',
         timestamp: new Date().toISOString(),
@@ -59,7 +60,7 @@ export class HealthController {
   @Roles(UserRole.ADMIN)
   async getSystemHealth() {
     const databaseHealth = await this.databaseHealthService.getHealthStatus();
-    
+
     return {
       status: databaseHealth.status === 'healthy' ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),

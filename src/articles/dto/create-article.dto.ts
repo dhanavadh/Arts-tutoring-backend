@@ -13,7 +13,7 @@ export class CreateArticleDto {
   @IsOptional()
   @IsNumber()
   teacherId?: number;
-  
+
   @IsString()
   title: string;
 

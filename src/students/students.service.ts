@@ -36,12 +36,14 @@ export class StudentsService {
   }
 
   async findById(id: number): Promise<Student> {
-    const student = await this.databaseHealthService.executeWithRetry(async () => {
-      return this.studentRepository.findOne({
-        where: { id },
-        relations: ['user'],
-      });
-    });
+    const student = await this.databaseHealthService.executeWithRetry(
+      async () => {
+        return this.studentRepository.findOne({
+          where: { id },
+          relations: ['user'],
+        });
+      },
+    );
 
     if (!student) {
       throw new NotFoundException('Student not found');
@@ -51,12 +53,14 @@ export class StudentsService {
   }
 
   async findByUserId(userId: number): Promise<Student> {
-    const student = await this.databaseHealthService.executeWithRetry(async () => {
-      return this.studentRepository.findOne({
-        where: { userId },
-        relations: ['user'],
-      });
-    });
+    const student = await this.databaseHealthService.executeWithRetry(
+      async () => {
+        return this.studentRepository.findOne({
+          where: { userId },
+          relations: ['user'],
+        });
+      },
+    );
 
     if (!student) {
       throw new NotFoundException('Student profile not found');

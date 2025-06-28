@@ -30,7 +30,13 @@ export class QuizAttempt {
   @Column({ name: 'student_id' })
   studentId: number;
 
-  @Column({ name: 'max_score', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'max_score',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   maxScore: number;
 
   @Column({ name: 'started_at' })

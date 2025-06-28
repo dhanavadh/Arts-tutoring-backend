@@ -44,8 +44,13 @@ export class AuthService {
     }
 
     // Check if user is verified (only for teachers and students)
-    if ((user.role === UserRole.TEACHER || user.role === UserRole.STUDENT) && !user.isVerified) {
-      throw new UnauthorizedException('Please verify your account with the OTP sent to your email');
+    if (
+      (user.role === UserRole.TEACHER || user.role === UserRole.STUDENT) &&
+      !user.isVerified
+    ) {
+      throw new UnauthorizedException(
+        'Please verify your account with the OTP sent to your email',
+      );
     }
 
     const payload = { email: user.email, sub: user.id, role: user.role };
@@ -115,7 +120,9 @@ export class AuthService {
         yearsExperience: roleSpecificData.experienceYears || 0,
         hourlyRate: roleSpecificData.hourlyRate,
         bio: roleSpecificData.bio,
-        qualifications: roleSpecificData.qualifications ? [roleSpecificData.qualifications] : [],
+        qualifications: roleSpecificData.qualifications
+          ? [roleSpecificData.qualifications]
+          : [],
       });
     } else if (role === 'student') {
       await this.studentsService.create({
@@ -131,10 +138,11 @@ export class AuthService {
     // For teachers and students, send OTP for verification
     if (role === UserRole.TEACHER || role === UserRole.STUDENT) {
       await this.otpService.generateOtp(email, firstName, OtpType.REGISTRATION);
-      
+
       return {
         success: true,
-        message: 'Registration successful. Please check your email for OTP verification.',
+        message:
+          'Registration successful. Please check your email for OTP verification.',
         requiresVerification: true,
         user: {
           id: user.id,

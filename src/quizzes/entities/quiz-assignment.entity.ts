@@ -50,7 +50,11 @@ export class QuizAssignment {
   @Column({ name: 'due_date', type: 'datetime', nullable: true })
   dueDate: Date | null;
 
-  @Column({ type: 'enum', enum: AssignmentStatus, default: AssignmentStatus.ASSIGNED })
+  @Column({
+    type: 'enum',
+    enum: AssignmentStatus,
+    default: AssignmentStatus.ASSIGNED,
+  })
   status: AssignmentStatus;
 
   @Column({ default: 0 })

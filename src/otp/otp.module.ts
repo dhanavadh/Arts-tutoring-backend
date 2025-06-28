@@ -7,11 +7,7 @@ import { EmailModule } from '../email/email.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Otp]),
-    EmailModule,
-    UsersModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Otp]), EmailModule, UsersModule],
   controllers: [OtpController],
   providers: [OtpService],
   exports: [OtpService],

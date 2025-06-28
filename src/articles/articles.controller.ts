@@ -43,18 +43,21 @@ export class ArticlesController {
     console.log('Articles findAll query type of status:', typeof query.status);
     console.log('Articles findAll query object keys:', Object.keys(query));
     console.log('Articles findAll query stringified:', JSON.stringify(query));
-    
+
     // Ensure the status is lowercase to match the enum values
     if (query.status) {
       query.status = query.status.toLowerCase();
       console.log('Articles findAll normalized status:', query.status);
     }
-    
+
     // Get all articles directly from the repository for debugging
     const articleRepo = this.articlesService.getArticleRepository();
     const allArticles = await articleRepo.find();
-    console.log('All articles in database:', allArticles.map(a => ({ id: a.id, title: a.title, status: a.status })));
-    
+    console.log(
+      'All articles in database:',
+      allArticles.map((a) => ({ id: a.id, title: a.title, status: a.status })),
+    );
+
     const result = await this.articlesService.findAllPublished(query);
     console.log('Articles findAll result count:', result?.articles?.length);
     return result;

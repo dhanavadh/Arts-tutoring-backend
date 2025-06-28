@@ -12,9 +12,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     private configService: ConfigService,
   ) {
     console.log('🔧 JwtStrategy constructor called');
-    const jwtSecret = configService.get<string>('JWT_SECRET') || 'your-super-secure-secret-key';
-    console.log('🔑 Using JWT secret from config:', jwtSecret.substring(0, 10) + '...');
-    
+    const jwtSecret =
+      configService.get<string>('JWT_SECRET') || 'your-super-secure-secret-key';
+    console.log(
+      '🔑 Using JWT secret from config:',
+      jwtSecret.substring(0, 10) + '...',
+    );
+
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         JwtStrategy.extractJwtFromCookie,
@@ -29,7 +33,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   private static extractJwtFromCookie(req: Request): string | null {
     console.log('🍪 Extracting JWT from cookie');
     console.log('Cookies available:', req.cookies);
-    if (req.cookies && 'access_token' in req.cookies && req.cookies.access_token.length > 0) {
+    if (
+      req.cookies &&
+      'access_token' in req.cookies &&
+      req.cookies.access_token.length > 0
+    ) {
       console.log('✅ JWT found in cookie');
       return req.cookies.access_token;
     }

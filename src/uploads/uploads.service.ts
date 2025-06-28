@@ -120,7 +120,7 @@ export class UploadsService {
 
   async remove(id: number): Promise<void> {
     const file = await this.findOne(id);
-    
+
     // Delete physical file
     if (fs.existsSync(file.path)) {
       fs.unlinkSync(file.path);

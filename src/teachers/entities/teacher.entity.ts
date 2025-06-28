@@ -11,6 +11,7 @@ import {
 import { User } from '../../users/entities/user.entity';
 import { Booking } from '../../bookings/entities/booking.entity';
 import { Article } from '../../articles/entities/article.entity';
+import { Availability } from '../../bookings/entities/availability.entity';
 
 @Entity('teachers')
 export class Teacher {
@@ -36,7 +37,6 @@ export class Teacher {
   @Column({ name: 'years_experience', default: 0 })
   yearsExperience: number;
 
-
   @Column({ name: 'is_verified', default: false })
   isVerified: boolean;
 
@@ -48,6 +48,9 @@ export class Teacher {
 
   @OneToMany(() => Article, (article) => article.teacher)
   articles: Article[];
+
+  @OneToMany(() => Availability, (availability) => availability.teacher)
+  availability: Availability[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

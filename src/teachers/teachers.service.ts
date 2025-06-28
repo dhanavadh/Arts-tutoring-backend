@@ -36,12 +36,14 @@ export class TeachersService {
   }
 
   async findById(id: number): Promise<Teacher> {
-    const teacher = await this.databaseHealthService.executeWithRetry(async () => {
-      return this.teacherRepository.findOne({
-        where: { id },
-        relations: ['user'],
-      });
-    });
+    const teacher = await this.databaseHealthService.executeWithRetry(
+      async () => {
+        return this.teacherRepository.findOne({
+          where: { id },
+          relations: ['user'],
+        });
+      },
+    );
 
     if (!teacher) {
       throw new NotFoundException('Teacher not found');
@@ -51,12 +53,14 @@ export class TeachersService {
   }
 
   async findByUserId(userId: number): Promise<Teacher> {
-    const teacher = await this.databaseHealthService.executeWithRetry(async () => {
-      return this.teacherRepository.findOne({
-        where: { userId },
-        relations: ['user'],
-      });
-    });
+    const teacher = await this.databaseHealthService.executeWithRetry(
+      async () => {
+        return this.teacherRepository.findOne({
+          where: { userId },
+          relations: ['user'],
+        });
+      },
+    );
 
     if (!teacher) {
       throw new NotFoundException('Teacher profile not found');

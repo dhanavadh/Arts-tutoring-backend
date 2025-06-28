@@ -20,14 +20,19 @@ export class ArticlesService {
     private uploadsService: UploadsService,
   ) {}
 
-  async create(createArticleDto: CreateArticleDto, user: User): Promise<Article> {
+  async create(
+    createArticleDto: CreateArticleDto,
+    user: User,
+  ): Promise<Article> {
     if (user.role !== UserRole.TEACHER && user.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only teachers and admins can create articles');
+      throw new ForbiddenException(
+        'Only teachers and admins can create articles',
+      );
     }
 
     // For admin users, we need to handle the case where they might not have a teacher profile
     let teacherId: number | undefined;
-    
+
     if (user.role === UserRole.TEACHER) {
       teacherId = user.teacher.id;
     } else if (user.role === UserRole.ADMIN) {
@@ -95,40 +100,45 @@ export class ArticlesService {
 
   async findAllPublished(query: any) {
     console.log('findAllPublished called with query:', query);
-    
+
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const searchQuery = query.search || '';
-    
+
     // Convert status to lowercase to ensure case insensitivity
-    let status = query.status ? query.status.toString().toLowerCase() : 'published';
-    
+    let status = query.status
+      ? query.status.toString().toLowerCase()
+      : 'published';
+
     // Ensure status is a valid enum value or default to published
     if (!Object.values(ArticleStatus).includes(status as ArticleStatus)) {
       status = ArticleStatus.PUBLISHED;
     }
-    
+
     console.log('Using status:', status);
-    
+
     // Build query using QueryBuilder
-    const queryBuilder = this.articleRepository.createQueryBuilder('article')
+    const queryBuilder = this.articleRepository
+      .createQueryBuilder('article')
       .leftJoinAndSelect('article.teacher', 'teacher')
       .leftJoinAndSelect('teacher.user', 'user')
       .skip((page - 1) * limit)
       .take(limit);
-    
+
     console.log('Query builder initialized');
-      
+
     // Apply status filter
     console.log('Applying status filter:', status);
     queryBuilder.andWhere('article.status = :status', { status });
-    
+
     // Apply search filter if provided
     if (searchQuery) {
       console.log('Adding search filter:', searchQuery);
-      queryBuilder.andWhere('article.title LIKE :search', { search: `%${searchQuery}%` });
+      queryBuilder.andWhere('article.title LIKE :search', {
+        search: `%${searchQuery}%`,
+      });
     }
-    
+
     // Apply ordering based on status
     if (query.status === ArticleStatus.PUBLISHED) {
       console.log('Using publishedAt ordering for published articles');
@@ -137,12 +147,12 @@ export class ArticlesService {
       console.log('Using createdAt ordering for non-published articles');
       queryBuilder.orderBy('article.createdAt', 'DESC');
     }
-    
+
     console.log('Executing query...');
-    
+
     // Execute query
     const [articles, total] = await queryBuilder.getManyAndCount();
-    
+
     console.log('Query results:', { articleCount: articles.length, total });
 
     return {
@@ -191,10 +201,17 @@ export class ArticlesService {
     return article;
   }
 
-  async update(id: number, updateArticleDto: UpdateArticleDto, user: User): Promise<Article> {
+  async update(
+    id: number,
+    updateArticleDto: UpdateArticleDto,
+    user: User,
+  ): Promise<Article> {
     const article = await this.findOne(id);
 
-    if (user.role !== UserRole.ADMIN && article.teacherId !== user.teacher?.id) {
+    if (
+      user.role !== UserRole.ADMIN &&
+      article.teacherId !== user.teacher?.id
+    ) {
       throw new ForbiddenException('You can only update your own articles');
     }
 
@@ -205,7 +222,10 @@ export class ArticlesService {
   async remove(id: number, user: User): Promise<void> {
     const article = await this.findOne(id);
 
-    if (user.role !== UserRole.ADMIN && article.teacherId !== user.teacher?.id) {
+    if (
+      user.role !== UserRole.ADMIN &&
+      article.teacherId !== user.teacher?.id
+    ) {
       throw new ForbiddenException('You can only delete your own articles');
     }
 
@@ -239,10 +259,17 @@ export class ArticlesService {
     };
   }
 
-  async uploadBanner(id: number, file: Express.Multer.File, user: User): Promise<Article> {
+  async uploadBanner(
+    id: number,
+    file: Express.Multer.File,
+    user: User,
+  ): Promise<Article> {
     const article = await this.findOne(id);
 
-    if (user.role !== UserRole.ADMIN && article.teacherId !== user.teacher?.id) {
+    if (
+      user.role !== UserRole.ADMIN &&
+      article.teacherId !== user.teacher?.id
+    ) {
       throw new ForbiddenException('You can only update your own articles');
     }
 
@@ -251,10 +278,17 @@ export class ArticlesService {
     return this.articleRepository.save(article);
   }
 
-  async uploadImage(id: number, file: Express.Multer.File, user: User): Promise<Article> {
+  async uploadImage(
+    id: number,
+    file: Express.Multer.File,
+    user: User,
+  ): Promise<Article> {
     const article = await this.findOne(id);
 
-    if (user.role !== UserRole.ADMIN && article.teacherId !== user.teacher?.id) {
+    if (
+      user.role !== UserRole.ADMIN &&
+      article.teacherId !== user.teacher?.id
+    ) {
       throw new ForbiddenException('You can only update your own articles');
     }
 

@@ -31,12 +31,15 @@ export class QuizzesController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
-  async create(@Body() createQuizDto: CreateQuizDto, @CurrentUser() user: User) {
+  async create(
+    @Body() createQuizDto: CreateQuizDto,
+    @CurrentUser() user: User,
+  ) {
     console.log('Creating quiz with data:', {
       title: createQuizDto.title,
       description: createQuizDto.description,
       questionCount: createQuizDto.questions?.length || 0,
-      questions: createQuizDto.questions?.map(q => ({
+      questions: createQuizDto.questions?.map((q) => ({
         type: q.questionType,
         text: q.question.substring(0, 50),
         marks: q.marks,
@@ -55,7 +58,8 @@ export class QuizzesController {
       title: quiz.title,
       status: quiz.status,
       questionCount: quiz.questions?.length || 0,
-      totalMarks: quiz.questions?.reduce((sum, q) => sum + (q.marks || 0), 0) || 0,
+      totalMarks:
+        quiz.questions?.reduce((sum, q) => sum + (q.marks || 0), 0) || 0,
     });
 
     return quiz;

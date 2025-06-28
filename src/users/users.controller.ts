@@ -71,7 +71,11 @@ export class UsersController {
   @Get('debug')
   @UseGuards(JwtAuthGuard)
   debugEndpoint(@CurrentUser() user: User) {
-    return { message: 'Debug endpoint working', user: user?.email, timestamp: new Date() };
+    return {
+      message: 'Debug endpoint working',
+      user: user?.email,
+      timestamp: new Date(),
+    };
   }
 
   @Patch('profile')

@@ -14,12 +14,18 @@ export class OtpService {
     private emailService: EmailService,
   ) {}
 
-  async generateOtp(email: string, firstName: string, type: OtpType = OtpType.REGISTRATION): Promise<boolean> {
+  async generateOtp(
+    email: string,
+    firstName: string,
+    type: OtpType = OtpType.REGISTRATION,
+  ): Promise<boolean> {
     const otpCode = this.generateRandomOtp();
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 10); // 10 minutes expiry
 
-    this.logger.log(`Generating OTP for ${email}: ${otpCode}, expires at: ${expiresAt}`);
+    this.logger.log(
+      `Generating OTP for ${email}: ${otpCode}, expires at: ${expiresAt}`,
+    );
 
     // Delete any existing OTP for this email and type
     await this.otpRepository.delete({ email, type });
@@ -36,8 +42,12 @@ export class OtpService {
     this.logger.log(`OTP saved to database with ID: ${savedOtp.id}`);
 
     // Send OTP email
-    const emailSent = await this.emailService.sendOtpEmail(email, otpCode, firstName);
-    
+    const emailSent = await this.emailService.sendOtpEmail(
+      email,
+      otpCode,
+      firstName,
+    );
+
     if (!emailSent) {
       // Clean up OTP record if email failed
       await this.otpRepository.delete(otp.id);
@@ -49,14 +59,25 @@ export class OtpService {
     return true;
   }
 
-  async verifyOtp(email: string, otpCode: string, type: OtpType = OtpType.REGISTRATION): Promise<boolean> {
-    this.logger.log(`Verifying OTP for email: ${email}, code: ${otpCode}, type: ${type}`);
-    
+  async verifyOtp(
+    email: string,
+    otpCode: string,
+    type: OtpType = OtpType.REGISTRATION,
+  ): Promise<boolean> {
+    this.logger.log(
+      `Verifying OTP for email: ${email}, code: ${otpCode}, type: ${type}`,
+    );
+
     const otp = await this.otpRepository.findOne({
       where: { email, type, isUsed: false },
     });
 
-    this.logger.log(`Found OTP record:`, otp ? `Code: ${otp.code}, Expires: ${otp.expiresAt}, Attempts: ${otp.attempts}` : 'None');
+    this.logger.log(
+      `Found OTP record:`,
+      otp
+        ? `Code: ${otp.code}, Expires: ${otp.expiresAt}, Attempts: ${otp.attempts}`
+        : 'None',
+    );
 
     if (!otp) {
       throw new BadRequestException('Invalid or expired OTP');
@@ -75,7 +96,9 @@ export class OtpService {
     // Check max attempts (3 attempts allowed)
     if (otp.attempts > 3) {
       await this.otpRepository.delete(otp.id);
-      throw new BadRequestException('Maximum OTP attempts exceeded. Please request a new OTP');
+      throw new BadRequestException(
+        'Maximum OTP attempts exceeded. Please request a new OTP',
+      );
     }
 
     // Verify OTP code

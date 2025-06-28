@@ -21,7 +21,7 @@ export class ApiDocsController {
   @Roles(UserRole.ADMIN)
   async getOpenApiSpec() {
     const spec = await this.apiDocsService.getApiSpecification();
-    
+
     // Convert to OpenAPI 3.0 format
     return {
       openapi: '3.0.0',
@@ -60,8 +60,8 @@ export class ApiDocsController {
   private buildOpenApiPaths(controllers: any[]) {
     const paths = {};
 
-    controllers.forEach(controller => {
-      controller.endpoints.forEach(endpoint => {
+    controllers.forEach((controller) => {
+      controller.endpoints.forEach((endpoint) => {
         if (!paths[endpoint.fullPath]) {
           paths[endpoint.fullPath] = {};
         }
@@ -70,12 +70,14 @@ export class ApiDocsController {
           summary: endpoint.description,
           tags: [controller.name.replace('Controller', '')],
           security: endpoint.roles ? [{ bearerAuth: [] }] : [],
-          parameters: endpoint.params ? endpoint.params.map(param => ({
-            name: param,
-            in: 'path',
-            required: true,
-            schema: { type: 'string' },
-          })) : [],
+          parameters: endpoint.params
+            ? endpoint.params.map((param) => ({
+                name: param,
+                in: 'path',
+                required: true,
+                schema: { type: 'string' },
+              }))
+            : [],
           responses: {
             '200': {
               description: 'Successful response',

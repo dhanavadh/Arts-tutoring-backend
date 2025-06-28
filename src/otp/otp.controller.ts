@@ -15,7 +15,11 @@ export class OtpController {
   @Post('verify')
   @HttpCode(HttpStatus.OK)
   async verify(@Body() verifyOtpDto: VerifyOtpDto) {
-    await this.otpService.verifyOtp(verifyOtpDto.email, verifyOtpDto.otp, OtpType.REGISTRATION);
+    await this.otpService.verifyOtp(
+      verifyOtpDto.email,
+      verifyOtpDto.otp,
+      OtpType.REGISTRATION,
+    );
     return {
       success: true,
       message: 'OTP verified successfully',
@@ -32,8 +36,12 @@ export class OtpController {
         message: 'User not found',
       };
     }
-    
-    await this.otpService.generateOtp(resendOtpDto.email, user.firstName, OtpType.REGISTRATION);
+
+    await this.otpService.generateOtp(
+      resendOtpDto.email,
+      user.firstName,
+      OtpType.REGISTRATION,
+    );
     return {
       success: true,
       message: 'OTP sent successfully',

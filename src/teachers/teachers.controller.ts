@@ -6,10 +6,16 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { TeachersService } from './teachers.service';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { UserRole, User } from '../users/entities/user.entity';
 
 @Controller('teachers')
 export class TeachersController {
@@ -23,6 +29,13 @@ export class TeachersController {
   @Get()
   findAll() {
     return this.teachersService.findAll();
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.TEACHER)
+  getMyProfile(@CurrentUser() user: User) {
+    return this.teachersService.findByUserId(user.id);
   }
 
   @Get(':id')

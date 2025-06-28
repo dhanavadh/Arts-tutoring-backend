@@ -17,22 +17,25 @@ export class UsersService {
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     const userData = { ...createUserDto };
-    
+
     // Set default profile image based on role if not provided
     if (!userData.profileImage) {
       switch (userData.role) {
         case UserRole.STUDENT:
-          userData.profileImage = 'https://artstutoring01.iconroof.co.th/student.png';
+          userData.profileImage =
+            'https://artstutoring01.iconroof.co.th/student.png';
           break;
         case UserRole.TEACHER:
-          userData.profileImage = 'https://artstutoring01.iconroof.co.th/teacher.png';
+          userData.profileImage =
+            'https://artstutoring01.iconroof.co.th/teacher.png';
           break;
         case UserRole.ADMIN:
-          userData.profileImage = 'https://artstutoring01.iconroof.co.th/admin.png';
+          userData.profileImage =
+            'https://artstutoring01.iconroof.co.th/admin.png';
           break;
       }
     }
-    
+
     const user = this.userRepository.create(userData);
     return this.userRepository.save(user);
   }
@@ -94,7 +97,10 @@ export class UsersService {
     await this.userRepository.update(id, { password: hashedPassword });
   }
 
-  async updateVerificationStatus(id: number, isVerified: boolean): Promise<void> {
+  async updateVerificationStatus(
+    id: number,
+    isVerified: boolean,
+  ): Promise<void> {
     await this.userRepository.update(id, { isVerified });
   }
 

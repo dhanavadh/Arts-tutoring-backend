@@ -1,4 +1,12 @@
-import { Controller, Post, Body, UseGuards, Request, Res, HttpCode } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+  Res,
+  HttpCode,
+} from '@nestjs/common';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -15,13 +23,16 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
-  async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) response: Response) {
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
     const result = await this.authService.login(loginDto);
-    
+
     // Temporarily return the token in the response for testing
     console.log('🍪 Login successful for user:', result.user?.email);
     console.log('🍪 Access token length:', result.accessToken?.length);
-    
+
     // Return user data WITH the token for frontend storage
     return {
       success: true,
@@ -34,9 +45,12 @@ export class AuthController {
   }
 
   @Post('register')
-  async register(@Body() registerDto: RegisterDto, @Res({ passthrough: true }) response: Response) {
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
     const result = await this.authService.register(registerDto);
-    
+
     // If user requires verification, don't set cookie
     if (result.requiresVerification) {
       return {
@@ -91,9 +105,12 @@ export class AuthController {
 
   @Post('verify-registration')
   @HttpCode(200)
-  async verifyRegistration(@Body() verifyOtpDto: VerifyOtpDto, @Res({ passthrough: true }) response: Response) {
+  async verifyRegistration(
+    @Body() verifyOtpDto: VerifyOtpDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
     const result = await this.authService.verifyRegistration(verifyOtpDto);
-    
+
     // Set access token in httpOnly cookie
     response.cookie('access_token', result.accessToken, {
       httpOnly: true,
@@ -117,9 +134,9 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async getProfile(@CurrentUser() user: User) {
     const { password, ...userProfile } = user;
-    return { 
+    return {
       success: true,
-      data: { user: userProfile } 
+      data: { user: userProfile },
     };
   }
 }
