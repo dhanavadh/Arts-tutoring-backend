@@ -17,6 +17,7 @@ import { EmailModule } from './email/email.module';
 import { OtpModule } from './otp/otp.module';
 import { HealthModule } from './health/health.module';
 import { ApiDocsModule } from './api-docs/api-docs.module';
+import { CoursesModule } from './courses/courses.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { ApiDocsModule } from './api-docs/api-docs.module';
     OtpModule,
     HealthModule,
     ApiDocsModule,
+    CoursesModule,
   ],
   providers: [DatabaseHealthService],
   exports: [DatabaseHealthService],

@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Booking } from '../../bookings/entities/booking.entity';
+import { CourseEnrollment } from '../../courses/entities/course-enrollment.entity';
 
 export enum StudentLevel {
   BEGINNER = 'beginner',
@@ -49,6 +50,9 @@ export class Student {
 
   @OneToMany(() => Booking, (booking) => booking.student)
   bookings: Booking[];
+
+  @OneToMany(() => CourseEnrollment, (enrollment) => enrollment.student)
+  courseEnrollments: CourseEnrollment[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

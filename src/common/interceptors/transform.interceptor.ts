@@ -8,6 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { SKIP_TRANSFORM_KEY } from '../decorators/skip-transform.decorator';
+import { NO_TRANSFORM_KEY } from '../decorators/no-transform.decorator';
 
 export interface Response<T> {
   data: T;
@@ -33,7 +34,12 @@ export class TransformInterceptor<T>
       [context.getHandler(), context.getClass()],
     );
 
-    if (skipTransform) {
+    const noTransform = this.reflector.getAllAndOverride<boolean>(
+      NO_TRANSFORM_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    if (skipTransform || noTransform) {
       return next.handle();
     }
 

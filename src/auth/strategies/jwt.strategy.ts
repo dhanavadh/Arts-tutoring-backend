@@ -52,7 +52,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       console.log('❌ User not found for ID:', payload.sub);
       throw new UnauthorizedException();
     }
-    console.log('✅ User validated:', user.email);
+    console.log('✅ User validated:', user.email, 'Role:', user.role, 'Has teacher:', !!user.teacher);
     return user;
   }
 }

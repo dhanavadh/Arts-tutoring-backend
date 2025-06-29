@@ -1,4 +1,4 @@
-import { IsNumber, IsString, IsOptional, IsPositive } from 'class-validator';
+import { IsNumber, IsString, IsOptional, IsPositive, ValidateIf } from 'class-validator';
 
 export class CreateTeacherDto {
   @IsNumber()
@@ -12,6 +12,7 @@ export class CreateTeacherDto {
   yearsExperience?: number;
 
   @IsOptional()
+  @ValidateIf((o) => o.hourlyRate !== null && o.hourlyRate !== undefined && o.hourlyRate !== 0)
   @IsNumber()
   @IsPositive()
   hourlyRate?: number;

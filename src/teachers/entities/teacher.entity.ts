@@ -12,6 +12,7 @@ import { User } from '../../users/entities/user.entity';
 import { Booking } from '../../bookings/entities/booking.entity';
 import { Article } from '../../articles/entities/article.entity';
 import { Availability } from '../../bookings/entities/availability.entity';
+import { Course } from '../../courses/entities/course.entity';
 
 @Entity('teachers')
 export class Teacher {
@@ -51,6 +52,9 @@ export class Teacher {
 
   @OneToMany(() => Availability, (availability) => availability.teacher)
   availability: Availability[];
+
+  @OneToMany(() => Course, (course) => course.teacher)
+  courses: Course[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

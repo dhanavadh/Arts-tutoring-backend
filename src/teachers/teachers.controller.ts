@@ -38,6 +38,13 @@ export class TeachersController {
     return this.teachersService.findByUserId(user.id);
   }
 
+  @Patch('me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.TEACHER)
+  updateMyProfile(@CurrentUser() user: User, @Body() updateTeacherDto: UpdateTeacherDto) {
+    return this.teachersService.updateByUserId(user.id, updateTeacherDto);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.teachersService.findOne(+id);
