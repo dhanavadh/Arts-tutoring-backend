@@ -55,7 +55,17 @@ export class Course {
   @Column({ name: 'estimated_duration', nullable: true })
   estimatedDuration: number; // in hours
 
-  @Column({ name: 'price', type: 'decimal', precision: 10, scale: 2, default: 0 })
+  @Column({
+    name: 'price',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    default: 0,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseFloat(value) || 0,
+    },
+  })
   price: number;
 
   @Column({ name: 'max_enrollments', nullable: true })

@@ -29,7 +29,16 @@ export class Teacher {
   @Column({ type: 'text' })
   subject: string;
 
-  @Column({ name: 'hourly_rate', type: 'decimal', precision: 10, scale: 2 })
+  @Column({
+    name: 'hourly_rate',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseFloat(value) || 0,
+    },
+  })
   hourlyRate: number;
 
   @Column({ type: 'text', nullable: true })

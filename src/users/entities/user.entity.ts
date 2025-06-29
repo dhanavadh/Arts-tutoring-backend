@@ -49,6 +49,9 @@ export class User {
   @Column({ name: 'profile_image', nullable: true })
   profileImage: string;
 
+  @Column({ name: 'website_url', nullable: true })
+  websiteUrl: string;
+
   @OneToOne(() => Teacher, (teacher) => teacher.user)
   teacher: Teacher;
 

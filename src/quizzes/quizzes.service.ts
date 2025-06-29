@@ -79,6 +79,7 @@ export class QuizzesService {
     const quiz = this.quizRepository.create({
       ...quizData,
       teacherId,
+      createdBy: user.id,
       totalMarks,
       status: quizData.status || 'draft',
       isActive: true,
@@ -203,6 +204,7 @@ export class QuizzesService {
     const [quizzes, total] = await this.quizRepository
       .createQueryBuilder('quiz')
       .where('quiz.isActive = :isActive', { isActive: true })
+      .leftJoinAndSelect('quiz.creator', 'creator')
       .leftJoinAndSelect('quiz.teacher', 'teacher')
       .leftJoinAndSelect('teacher.user', 'teacherUser')
       .leftJoinAndSelect('quiz.questions', 'questions')
@@ -261,6 +263,7 @@ export class QuizzesService {
         .leftJoinAndSelect('quiz.assignments', 'assignments')
         .leftJoinAndSelect('assignments.student', 'student')
         .leftJoinAndSelect('student.user', 'studentUser')
+        .leftJoinAndSelect('quiz.creator', 'creator')
         .leftJoinAndSelect('quiz.teacher', 'teacher')
         .leftJoinAndSelect('teacher.user', 'teacherUser')
         .where('quiz.id = :id', { id })
@@ -611,6 +614,7 @@ export class QuizzesService {
             firstName: assignment.student.user.firstName,
             lastName: assignment.student.user.lastName,
             email: assignment.student.user.email,
+            profileImage: assignment.student.user.profileImage,
           },
           schoolGrade: assignment.student.schoolGrade,
           level: assignment.student.level,
@@ -668,6 +672,29 @@ export class QuizzesService {
     }
 
     await this.quizAssignmentRepository.delete({ quizId, studentId });
+
+    // Check if this was the last assigned student
+    const remainingAssignments = await this.quizAssignmentRepository.count({
+      where: { quizId },
+    });
+
+    // If no students remain and quiz is published, automatically unpublish it
+    if (
+      remainingAssignments === 0 &&
+      quiz &&
+      'status' in quiz &&
+      (quiz as any).status === 'published'
+    ) {
+      await this.quizRepository.update(quizId, { status: 'draft' });
+      console.log(
+        `Quiz ${quizId} automatically unpublished - no students remaining`,
+      );
+
+      return {
+        message:
+          'Assignment removed successfully. Quiz has been automatically unpublished since no students remain assigned.',
+      };
+    }
 
     return { message: 'Assignment removed successfully' };
   }

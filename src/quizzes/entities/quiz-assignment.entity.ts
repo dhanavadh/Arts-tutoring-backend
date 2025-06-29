@@ -23,13 +23,13 @@ export class QuizAssignment {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Quiz)
+  @ManyToOne(() => Quiz, { onDelete: 'CASCADE' })
   quiz: Quiz;
 
   @Column({ name: 'quiz_id' })
   quizId: number;
 
-  @ManyToOne(() => Student)
+  @ManyToOne(() => Student, { onDelete: 'CASCADE' })
   student: Student;
 
   @Column({ name: 'student_id' })

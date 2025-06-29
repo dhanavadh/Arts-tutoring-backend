@@ -26,14 +26,13 @@ import { NoTransform } from '../common/decorators/no-transform.decorator';
 import { UserRole } from '../users/entities/user.entity';
 
 @Controller('courses')
-@UseGuards(JwtAuthGuard)
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {
     console.log('🎯 CoursesController initialized');
   }
 
   @Post()
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   create(@Body() createCourseDto: CreateCourseDto, @Request() req) {
     console.log('🎯 CoursesController.create called');
@@ -54,14 +53,14 @@ export class CoursesController {
   }
 
   @Get('my-courses')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   findMyCourses(@Request() req) {
     return this.coursesService.findByTeacher(req.user.teacher?.id || req.user.id);
   }
 
   @Get('my-enrollments')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.STUDENT)
   getMyEnrollments(@Request() req) {
     return this.coursesService.getStudentEnrollments(req.user);
@@ -73,42 +72,42 @@ export class CoursesController {
   }
 
   @Get(':id/enrollments')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   getEnrollments(@Param('id') id: string, @Request() req) {
     return this.coursesService.getEnrollments(+id, req.user);
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   update(@Param('id') id: string, @Body() updateCourseDto: UpdateCourseDto, @Request() req) {
     return this.coursesService.update(+id, updateCourseDto, req.user);
   }
 
   @Patch(':id/publish')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   publish(@Param('id') id: string, @Body() publishCourseDto: PublishCourseDto, @Request() req) {
     return this.coursesService.publish(+id, publishCourseDto, req.user);
   }
 
   @Post('enroll')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.STUDENT)
   enroll(@Body() enrollCourseDto: EnrollCourseDto, @Request() req) {
     return this.coursesService.enroll(enrollCourseDto, req.user);
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   remove(@Param('id') id: string, @Request() req) {
     return this.coursesService.remove(+id, req.user);
   }
 
   @Post(':id/upload-banner')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   @UseInterceptors(FileInterceptor('banner', multerConfig))
   async uploadBanner(
@@ -121,7 +120,7 @@ export class CoursesController {
 
   @Post('upload-image')
   @NoTransform()
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   @UseInterceptors(FileInterceptor('file', multerConfig))
   async uploadImage(

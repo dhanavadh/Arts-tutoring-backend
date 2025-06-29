@@ -20,4 +20,8 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   profileImage?: string;
+
+  @IsOptional()
+  @IsString()
+  websiteUrl?: string;
 }

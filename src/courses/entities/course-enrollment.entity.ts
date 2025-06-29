@@ -45,7 +45,17 @@ export class CourseEnrollment {
   @Column({ name: 'completed_at', nullable: true })
   completedAt: Date;
 
-  @Column({ name: 'progress_percentage', type: 'decimal', precision: 5, scale: 2, default: 0 })
+  @Column({
+    name: 'progress_percentage',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    default: 0,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseFloat(value) || 0,
+    },
+  })
   progressPercentage: number;
 
   @Column({ type: 'text', nullable: true })

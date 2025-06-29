@@ -9,7 +9,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'student_teacher_system',
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-  synchronize: process.env.NODE_ENV === 'development',
+  synchronize: false, // Temporarily disabled to avoid schema sync issues
   logging: process.env.NODE_ENV === 'development',
   timezone: '+00:00',
   charset: 'utf8mb4',

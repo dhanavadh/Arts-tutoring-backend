@@ -36,6 +36,10 @@ export class QuizAttempt {
     precision: 5,
     scale: 2,
     nullable: true,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseFloat(value) || 0,
+    },
   })
   maxScore: number;
 
@@ -48,7 +52,16 @@ export class QuizAttempt {
   @Column({ type: 'json', nullable: true })
   answers: any;
 
-  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseFloat(value) || 0,
+    },
+  })
   score: number;
 
   @Column({ name: 'time_taken', nullable: true })

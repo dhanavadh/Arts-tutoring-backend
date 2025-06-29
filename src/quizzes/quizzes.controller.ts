@@ -131,7 +131,7 @@ export class QuizzesController {
 
   @Put(':id')
   @UseGuards(RolesGuard)
-  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  @Roles(UserRole.TEACHER)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateQuizDto: CreateQuizDto,

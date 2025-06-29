@@ -28,8 +28,8 @@ import { CoursesModule } from './courses/courses.module';
       ...databaseConfig,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       migrations: [__dirname + '/migrations/*{.ts,.js}'],
-      synchronize: true, // Disabled to prevent automatic schema changes
-      migrationsRun: true, // Run migrations automatically on startup
+      // Use the synchronize setting from databaseConfig to avoid schema sync issues
+      migrationsRun: false, // Disable automatic migrations for now to avoid conflicts
     }),
     AuthModule,
     UsersModule,

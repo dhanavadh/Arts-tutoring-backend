@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { QuizQuestion } from './quiz-question.entity';
 import { Teacher } from '../../teachers/entities/teacher.entity';
+import { User } from '../../users/entities/user.entity';
 import { QuizAssignment } from './quiz-assignment.entity';
 
 @Entity('quizzes')
@@ -45,6 +46,13 @@ export class Quiz {
   @ManyToOne(() => Teacher, { nullable: true })
   @JoinColumn({ name: 'teacher_id' })
   teacher?: Teacher;
+
+  @Column({ name: 'created_by', type: 'int', nullable: true })
+  createdBy?: number;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'created_by' })
+  creator?: User;
 
   @Column({ name: 'total_marks', default: 0 })
   totalMarks: number;
