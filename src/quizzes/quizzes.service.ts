@@ -338,13 +338,18 @@ export class QuizzesService {
       throw new NotFoundException('Quiz not found');
     }
 
-    // Check permissions - only quiz owner (teacher) or admin can update
+    // Check permissions - only quiz owner can update
     if (user.role === UserRole.TEACHER) {
       const teacher = await this.teachersService.findByUserId(user.id);
       if (existingQuiz.teacherId !== teacher.id) {
         throw new ForbiddenException('You can only update your own quizzes');
       }
-    } else if (user.role !== UserRole.ADMIN) {
+    } else if (user.role === UserRole.ADMIN) {
+      // Admins can only edit quizzes they created themselves
+      if (existingQuiz.createdBy !== user.id) {
+        throw new ForbiddenException('You can only update quizzes you created');
+      }
+    } else {
       throw new ForbiddenException(
         'Only teachers and admins can update quizzes',
       );
@@ -1114,10 +1119,10 @@ export class QuizzesService {
       quiz = await this.quizRepository.findOne({
         where: { id, teacherId: teacher.id },
       });
-    } else {
-      // Admin can delete any quiz
+    } else if (user.role === UserRole.ADMIN) {
+      // Admin can only delete quizzes they created
       quiz = await this.quizRepository.findOne({
-        where: { id },
+        where: { id, createdBy: user.id },
       });
     }
 
@@ -1145,17 +1150,17 @@ export class QuizzesService {
   }
 
   async publishQuiz(id: number, user: User): Promise<Quiz> {
-    let quiz: Quiz | null;
+    let quiz: Quiz | null = null;
 
     if (user.role === UserRole.TEACHER) {
       const teacher = await this.teachersService.findByUserId(user.id);
       quiz = await this.quizRepository.findOne({
         where: { id, teacherId: teacher.id },
       });
-    } else {
-      // Admin can publish any quiz
+    } else if (user.role === UserRole.ADMIN) {
+      // Admin can only publish quizzes they created
       quiz = await this.quizRepository.findOne({
-        where: { id },
+        where: { id, createdBy: user.id },
       });
     }
 
@@ -1178,17 +1183,17 @@ export class QuizzesService {
   }
 
   async unpublishQuiz(id: number, user: User): Promise<Quiz> {
-    let quiz: Quiz | null;
+    let quiz: Quiz | null = null;
 
     if (user.role === UserRole.TEACHER) {
       const teacher = await this.teachersService.findByUserId(user.id);
       quiz = await this.quizRepository.findOne({
         where: { id, teacherId: teacher.id },
       });
-    } else {
-      // Admin can unpublish any quiz
+    } else if (user.role === UserRole.ADMIN) {
+      // Admin can only unpublish quizzes they created
       quiz = await this.quizRepository.findOne({
-        where: { id },
+        where: { id, createdBy: user.id },
       });
     }
 
