@@ -235,8 +235,14 @@ export class QuizzesService {
       })),
     });
 
+    // Add computed isPublished field for frontend compatibility
+    const quizzesWithIsPublished = quizzes.map((quiz) => ({
+      ...quiz,
+      isPublished: quiz.status === 'published',
+    }));
+
     return {
-      data: quizzes,
+      data: quizzesWithIsPublished,
       total,
       page,
       limit,
@@ -245,11 +251,17 @@ export class QuizzesService {
   }
 
   async findByTeacher(teacherId: number) {
-    return this.quizRepository.find({
+    const quizzes = await this.quizRepository.find({
       where: { teacherId, isActive: true },
       relations: ['questions'],
       order: { createdAt: 'DESC' },
     });
+
+    // Add computed isPublished field for frontend compatibility
+    return quizzes.map((quiz) => ({
+      ...quiz,
+      isPublished: quiz.status === 'published',
+    }));
   }
 
   async findOne(id: number): Promise<Quiz> {
@@ -320,7 +332,11 @@ export class QuizzesService {
       console.log('Quiz has no assignments');
     }
 
-    return quiz;
+    // Add computed isPublished field for frontend compatibility
+    return {
+      ...quiz,
+      isPublished: quiz.status === 'published',
+    } as Quiz;
   }
 
   async update(
@@ -589,10 +605,19 @@ export class QuizzesService {
       quiz = await this.quizRepository.findOne({
         where: { id: quizId, teacherId: teacher.id },
       });
-    } else {
+    } else if (user.role === UserRole.ADMIN) {
+      // First check if admin owns the quiz
       quiz = await this.quizRepository.findOne({
-        where: { id: quizId },
+        where: { id: quizId, createdBy: user.id },
       });
+
+      // If admin doesn't own the quiz, allow access to any existing quiz
+      // This enables admins to manage all quizzes in the system
+      if (!quiz) {
+        quiz = await this.quizRepository.findOne({
+          where: { id: quizId, isActive: true },
+        });
+      }
     }
 
     if (!quiz) {
@@ -1031,10 +1056,10 @@ export class QuizzesService {
         where: { id: quizId, teacherId: teacher.id },
         relations: ['questions'],
       });
-    } else {
-      // Admin can view any quiz
+    } else if (user.role === UserRole.ADMIN) {
+      // Admin can only view results for quizzes they created
       quiz = await this.quizRepository.findOne({
-        where: { id: quizId },
+        where: { id: quizId, createdBy: user.id },
         relations: ['questions'],
       });
     }
